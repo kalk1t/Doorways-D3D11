@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="src\Doorways\Doorways.vcxproj" />
+  <Project Path="src\Doorways\Doorways.vcxproj" Id="8dab1e4e-f36e-4a7b-bb76-0f4ef59f8d4d" />
 </Solution>

@@ -25,6 +25,13 @@ private:
     bool BuildShaders();
 	bool BuildGeometry();
 
+    void ClearFrame();
+    void BindRenderPipeline();
+
+    XMMATRIX BuildViewProjectionMatrix() const;
+
+    void DrawScene(const XMMATRIX& viewProjection);
+    void DrawBox(const XMMATRIX& world, const XMMATRIX& viewProjection);
 
 private:
     HINSTANCE mAppInstance = nullptr;

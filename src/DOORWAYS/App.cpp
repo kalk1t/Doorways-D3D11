@@ -584,6 +584,164 @@ bool App::BuildGeometry()
     return true;
 }
 
+void App::ClearFrame()
+{
+    const float clearColor[4] =
+    {
+        0.05f,
+        0.08f,
+        0.12f,
+        1.0f
+    };
+
+    mImmediateContext->ClearRenderTargetView(
+        mRenderTargetView.Get(),
+        clearColor);
+
+    mImmediateContext->ClearDepthStencilView(
+        mDepthStencilView.Get(),
+        D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
+        1.0f,
+        0);
+}
+
+void App::BindRenderPipeline()
+{
+    UINT stride = sizeof(Vertex);
+    UINT offset = 0;
+
+    mImmediateContext->IASetInputLayout(mInputLayout.Get());
+
+    mImmediateContext->IASetVertexBuffers(
+        0,
+        1,
+        mVertexBuffer.GetAddressOf(),
+        &stride,
+        &offset);
+
+    mImmediateContext->IASetIndexBuffer(
+        mIndexBuffer.Get(),
+        DXGI_FORMAT_R16_UINT,
+        0);
+
+    mImmediateContext->IASetPrimitiveTopology(
+        D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    mImmediateContext->VSSetShader(
+        mVertexShader.Get(),
+        nullptr,
+        0);
+
+    mImmediateContext->PSSetShader(
+        mPixelShader.Get(),
+        nullptr,
+        0);
+
+    ID3D11Buffer* constantBuffers[] =
+    {
+        mConstantBuffer.Get()
+    };
+
+    mImmediateContext->VSSetConstantBuffers(
+        0,
+        1,
+        constantBuffers);
+}
+
+XMMATRIX App::BuildViewProjectionMatrix() const
+{
+    XMVECTOR cameraPosition = XMLoadFloat3(&mCameraPosition);
+
+    float cosYaw = cosf(mCameraYaw);
+    float sinYaw = sinf(mCameraYaw);
+    float cosPitch = cosf(mCameraPitch);
+    float sinPitch = sinf(mCameraPitch);
+
+    XMVECTOR lookDirection = XMVectorSet(
+        cosPitch * sinYaw,
+        sinPitch,
+        cosPitch * cosYaw,
+        0.0f);
+
+    XMVECTOR cameraTarget = cameraPosition + lookDirection;
+
+    XMVECTOR upDirection = XMVectorSet(
+        0.0f,
+        1.0f,
+        0.0f,
+        0.0f);
+
+    XMMATRIX view = XMMatrixLookAtLH(
+        cameraPosition,
+        cameraTarget,
+        upDirection);
+
+    float aspectRatio =
+        static_cast<float>(mClientWidth) /
+        static_cast<float>(mClientHeight);
+
+    XMMATRIX projection = XMMatrixPerspectiveFovLH(
+        0.25f * XM_PI,
+        aspectRatio,
+        0.1f,
+        100.0f);
+
+    return view * projection;
+}
+
+void App::DrawBox(const XMMATRIX& world, const XMMATRIX& viewProjection)
+{
+    ConstantBuffer constantBuffer = {};
+
+    XMStoreFloat4x4(
+        &constantBuffer.WorldViewProj,
+        world * viewProjection);
+
+    mImmediateContext->UpdateSubresource(
+        mConstantBuffer.Get(),
+        0,
+        nullptr,
+        &constantBuffer,
+        0,
+        0);
+
+    mImmediateContext->DrawIndexed(
+        mIndexCount,
+        0,
+        0);
+}
+
+void App::DrawScene(const XMMATRIX& viewProjection)
+{
+    // Floor
+    XMMATRIX floorWorld =
+        XMMatrixScaling(5.0f, 0.1f, 4.0f) *
+        XMMatrixTranslation(0.0f, -0.55f, 0.0f);
+
+    DrawBox(floorWorld, viewProjection);
+
+    // Left door
+    XMMATRIX leftDoorWorld =
+        XMMatrixScaling(0.8f, 1.8f, 0.15f) *
+        XMMatrixTranslation(-1.5f, 0.4f, 1.2f);
+
+    DrawBox(leftDoorWorld, viewProjection);
+
+    // Middle door
+    XMMATRIX middleDoorWorld =
+        XMMatrixScaling(0.8f, 1.8f, 0.15f) *
+        XMMatrixTranslation(0.0f, 0.4f, 1.2f);
+
+    DrawBox(middleDoorWorld, viewProjection);
+
+    // Right door
+    XMMATRIX rightDoorWorld =
+        XMMatrixScaling(0.8f, 1.8f, 0.15f) *
+        XMMatrixTranslation(1.5f, 0.4f, 1.2f);
+
+    DrawBox(rightDoorWorld, viewProjection);
+}
+
 void App::Update()
 {
 
@@ -636,131 +794,13 @@ void App::Update()
 
 void App::Render()
 {
-    const float clearColor[4] =
-    {
-        0.05f,
-        0.08f,
-        0.12f,
-        1.0f
-    };
+    ClearFrame();
 
-    mImmediateContext->ClearRenderTargetView(
-        mRenderTargetView.Get(),
-        clearColor);
+    BindRenderPipeline();
 
-    mImmediateContext->ClearDepthStencilView(
-        mDepthStencilView.Get(),
-        D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
-        1.0f,
-        0);
+    XMMATRIX viewProjection = BuildViewProjectionMatrix();
 
-	UINT stride = sizeof(Vertex);
-	UINT offset = 0;
+    DrawScene(viewProjection);
 
-	mImmediateContext->IASetInputLayout(mInputLayout.Get());
-
-	mImmediateContext->IASetVertexBuffers(0, 1,
-        mVertexBuffer.GetAddressOf(), &stride, &offset);
-
-    mImmediateContext->IASetIndexBuffer(mIndexBuffer.Get(),
-		DXGI_FORMAT_R16_UINT, 0);
-
-    mImmediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-	mImmediateContext->VSSetShader(mVertexShader.Get(), nullptr, 0);
-
-	mImmediateContext->PSSetShader(mPixelShader.Get(), nullptr, 0);
-
-	ID3D11Buffer* constantBuffers[] = { mConstantBuffer.Get() };
-
-    mImmediateContext->VSSetConstantBuffers(0, 1, constantBuffers);
-
-
-	XMVECTOR cameraPosition = XMLoadFloat3(&mCameraPosition);
-
-	float cosYaw = cosf(mCameraYaw);
-	float sinYaw = sinf(mCameraYaw);
-	float cosPitch = cosf(mCameraPitch);
-	float sinPitch = sinf(mCameraPitch);
-
-    XMVECTOR lookDirection = XMVectorSet(
-        cosPitch * sinYaw,
-        sinPitch,
-        cosPitch * cosYaw,
-		0.0f);
-
-	XMVECTOR cameraTarget = cameraPosition + lookDirection;
-
-	XMVECTOR upDirection = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-
-
-    XMMATRIX view = XMMatrixLookAtLH(
-        cameraPosition,
-        cameraTarget,
-        upDirection);
-
-    float aspectRatio = 
-        static_cast<float>(mClientWidth)/static_cast<float>(mClientHeight);
-
-    XMMATRIX projection = XMMatrixPerspectiveFovLH(
-        0.25f * XM_PI,
-        aspectRatio,
-        0.1f,
-        100.0f);
-
-    XMMATRIX viewProjection = view * projection;
-
-    auto DrawBox = [&](CXMMATRIX world)
-        {
-            ConstantBuffer constantBuffer = {};
-
-            XMStoreFloat4x4(
-                &constantBuffer.WorldViewProj,
-                world * viewProjection);
-
-            mImmediateContext->UpdateSubresource(
-                mConstantBuffer.Get(),
-                0,
-                nullptr,
-                &constantBuffer,
-                0,
-                0);
-
-            mImmediateContext->DrawIndexed(
-                mIndexCount,
-                0,
-                0);
-        };
-
-    // Floor
-    XMMATRIX floorWorld =
-        XMMatrixScaling(5.0f, 0.1f, 4.0f) *
-        XMMatrixTranslation(0.0f, -0.55f, 0.0f);
-
-    DrawBox(floorWorld);
-
-    // Left door
-    XMMATRIX leftDoorWorld =
-        XMMatrixScaling(0.8f, 1.8f, 0.15f) *
-        XMMatrixTranslation(-1.5f, 0.4f, 1.2f);
-
-    DrawBox(leftDoorWorld);
-
-    // Middle door
-    XMMATRIX middleDoorWorld =
-        XMMatrixScaling(0.8f, 1.8f, 0.15f) *
-        XMMatrixTranslation(0.0f, 0.4f, 1.2f);
-
-    DrawBox(middleDoorWorld);
-
-    // Right door
-    XMMATRIX rightDoorWorld =
-        XMMatrixScaling(0.8f, 1.8f, 0.15f) *
-        XMMatrixTranslation(1.5f, 0.4f, 1.2f);
-
-    DrawBox(rightDoorWorld);
-
-
-
-	mSwapChain->Present(1, 0);
+    mSwapChain->Present(1, 0);
 }

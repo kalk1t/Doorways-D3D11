@@ -53,33 +53,45 @@ Im using it as an learning tool, thanks OpenAI.
 
 ## Milestones
 
-## Milestone 2 — First Porch Geometry ✅
+## Milestone 3 — Camera Control
 
-Milestone 2 upgrades the renderer from a simple colored triangle/rectangle demo into the first real 3D scene for **Doorways**.
+Milestone 3 adds a controllable camera to the Doorways Direct3D 11 project.
 
-The scene now renders:
+In the previous milestone, the scene used a hardcoded camera inside the render function.  
+In this milestone, the camera was moved into application state so it can be updated every frame.
 
-- A floor platform
-- Three upright door boxes
-- Reusable indexed cube geometry
-- Per-object world transforms
-- A camera view matrix
-- A perspective projection matrix
+### Completed Features
 
-### Completed Work
+- Added camera position as persistent `App` state.
+- Added camera yaw for left/right rotation.
+- Added camera pitch for up/down rotation.
+- Added an `Update()` function to separate logic from rendering.
+- Updated the main loop to call `Update()` before `Render()`.
+- Rebuilt the view matrix every frame from camera data.
+- Added arrow-key camera rotation.
+- Added pitch clamping to prevent the camera from flipping.
+- Added keyboard movement for navigating the porch scene.
 
-- Added an index buffer using `ID3D11Buffer`.
-- Replaced direct non-indexed drawing with `DrawIndexed()`.
-- Created one reusable cube mesh.
-- Added a constant buffer for sending `WorldViewProjection` data to the vertex shader.
-- Updated the HLSL vertex shader to transform local-space vertices into clip space.
-- Added world matrices for each object.
-- Drew the same cube mesh multiple times as different scene objects:
-  - Floor
-  - Left door
-  - Middle door
-  - Right door
-- Added a basic camera using `XMMatrixLookAtLH()`.
-- Added perspective projection using `XMMatrixPerspectiveFovLH()`.
+### Camera Controls
+
+| Key | Action |
+|---|---|
+| `W` | Move forward |
+| `S` | Move backward |
+| `A` | Move left |
+| `D` | Move right |
+| `Left Arrow` | Look left |
+| `Right Arrow` | Look right |
+| `Up Arrow` | Look up |
+| `Down Arrow` | Look down |
+| `R` | Restarts camera position |
+| `ESC` | Close the application |
+
+### Important Concepts Learned
+
+This milestone focused on the difference between object movement and camera movement.
 
 
+World matrix changes the object.
+View matrix changes the camera.
+Projection matrix creates perspective.

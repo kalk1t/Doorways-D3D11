@@ -3,6 +3,10 @@
 #include <windows.h>
 #include <d3d11.h>
 #include <wrl/client.h>
+#include <DirectXMath.h>
+
+
+using namespace DirectX;
 
 class App
 {
@@ -14,10 +18,13 @@ public:
 private:
     bool InitWindow();
     bool InitDirect3D();
+
+    void Update();
     void Render();
 
     bool BuildShaders();
 	bool BuildGeometry();
+
 
 private:
     HINSTANCE mAppInstance = nullptr;
@@ -42,5 +49,13 @@ private:
     Microsoft::WRL::ComPtr<ID3D11Buffer> mConstantBuffer;
 
     UINT mIndexCount = 0;
+	                            //x=center,y=above the ground,z=behin the objects
+	XMFLOAT3 mCameraPosition = XMFLOAT3(0.0f, 2.0f, -6.0f); //eye position
+
+	float mCameraYaw = 0.0f; //rotates around Y axis, left and right
+	float mCameraPitch = -0.25f; //rotates around X axis, up and down.
+
+	float mMoveSpeed = 0.05f; //how fast the camera moves in the scene
+	float mTurnSpeed = 0.02f; //how fast the camera turns when the mouse moves
 
 };

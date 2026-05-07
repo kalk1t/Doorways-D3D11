@@ -115,6 +115,7 @@ int App::Run()
         }
         else
         {
+			Update();
             Render();
         }
     }
@@ -583,6 +584,56 @@ bool App::BuildGeometry()
     return true;
 }
 
+void App::Update()
+{
+
+    if(GetAsyncKeyState(VK_ESCAPE) & 0x8000)
+    {
+        DestroyWindow(mMainWindow);
+	}
+
+    if (GetAsyncKeyState('A') & 0x8000 || GetAsyncKeyState(VK_LEFT) & 0x8000)
+    {
+        mCameraYaw -= mTurnSpeed;
+    }
+
+    if (GetAsyncKeyState('D') & 0x8000 || GetAsyncKeyState(VK_RIGHT) & 0x8000)
+    {
+        mCameraYaw += mTurnSpeed;
+    }
+
+    if (GetAsyncKeyState('W') & 0x8000 || GetAsyncKeyState(VK_UP) & 0x8000  )
+    {
+        mCameraPitch += mTurnSpeed;
+    }
+
+    if (GetAsyncKeyState('S') & 0x8000 || GetAsyncKeyState(VK_DOWN) & 0x8000)
+    {
+        mCameraPitch -= mTurnSpeed;
+    }
+
+    if(GetAsyncKeyState('R') & 0x8000)
+    {
+        mCameraYaw = 0.0f;
+        mCameraPitch = -0.25f;
+	}
+
+
+    const float pitchLimit = 0.9f;
+
+    if (mCameraPitch > pitchLimit)
+    {
+        mCameraPitch = pitchLimit;
+    }
+
+    if (mCameraPitch < -pitchLimit)
+    {
+        mCameraPitch = -pitchLimit;
+    }
+
+
+}
+
 void App::Render()
 {
     const float clearColor[4] =
@@ -624,10 +675,29 @@ void App::Render()
 
     mImmediateContext->VSSetConstantBuffers(0, 1, constantBuffers);
 
+
+	XMVECTOR cameraPosition = XMLoadFloat3(&mCameraPosition);
+
+	float cosYaw = cosf(mCameraYaw);
+	float sinYaw = sinf(mCameraYaw);
+	float cosPitch = cosf(mCameraPitch);
+	float sinPitch = sinf(mCameraPitch);
+
+    XMVECTOR lookDirection = XMVectorSet(
+        cosPitch * sinYaw,
+        sinPitch,
+        cosPitch * cosYaw,
+		0.0f);
+
+	XMVECTOR cameraTarget = cameraPosition + lookDirection;
+
+	XMVECTOR upDirection = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+
+
     XMMATRIX view = XMMatrixLookAtLH(
-        XMVectorSet(0.0f, 2.0f, -6.0f, 1.0f),//x=center,y=above the ground,z=behin the objects
-        XMVectorSet(0.0f, 0.3f, 0.5f, 1.0f),//look toward the porch area
-        XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));//up direction
+        cameraPosition,
+        cameraTarget,
+        upDirection);
 
     float aspectRatio = 
         static_cast<float>(mClientWidth)/static_cast<float>(mClientHeight);

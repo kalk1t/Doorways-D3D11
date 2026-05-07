@@ -53,158 +53,33 @@ Im using it as an learning tool, thanks OpenAI.
 
 ## Milestones
 
-## Milestone 0 — Project Setup   
+## Milestone 2 — First Porch Geometry ✅
 
-✅ Completed
+Milestone 2 upgrades the renderer from a simple colored triangle/rectangle demo into the first real 3D scene for **Doorways**.
 
-Set up the initial C++/Direct3D 11 project structure and prepared the repository for development.
+The scene now renders:
 
-Completed:
-- Created the Doorways project
-- Set up the Visual Studio solution/project structure
-- Added the initial source files
-- Organized the project for future milestones
-- Prepared the repository for Git/GitHub version control
-- Confirmed the project builds as a clean starting point
+- A floor platform
+- Three upright door boxes
+- Reusable indexed cube geometry
+- Per-object world transforms
+- A camera view matrix
+- A perspective projection matrix
 
-Result:
-The project now has a stable foundation for building the Direct3D 11 application step by step.
+### Completed Work
 
-## Milestone 1 — Direct3D 11 Window Foundation
+- Added an index buffer using `ID3D11Buffer`.
+- Replaced direct non-indexed drawing with `DrawIndexed()`.
+- Created one reusable cube mesh.
+- Added a constant buffer for sending `WorldViewProjection` data to the vertex shader.
+- Updated the HLSL vertex shader to transform local-space vertices into clip space.
+- Added world matrices for each object.
+- Drew the same cube mesh multiple times as different scene objects:
+  - Floor
+  - Left door
+  - Middle door
+  - Right door
+- Added a basic camera using `XMMatrixLookAtLH()`.
+- Added perspective projection using `XMMatrixPerspectiveFovLH()`.
 
-✅ Completed
 
-Implemented the core Win32 and Direct3D 11 initialization layer.
-
-Completed:
-- Created a Win32 application entry point with `WinMain`
-- Created the main `App` class
-- Registered and created a native Windows window
-- Added a message loop using `PeekMessage`
-- Initialized the Direct3D 11 device
-- Created the device context
-- Created the swap chain
-- Created the render target view
-- Created the depth/stencil buffer
-- Created the depth/stencil view
-- Bound the render target and depth/stencil view to the output merger
-- Set the viewport
-- Cleared the screen every frame
-- Presented the back buffer using the swap chain
-- Added ESC key handling to close the window
-
-Result:
-The application now opens a native Windows window, initializes Direct3D 11, clears the screen every frame, and presents the result to the display.
-
-## Milestone 2 — First Geometry Rendered
-
-✅ Completed
-
-Implemented the first Direct3D 11 geometry pipeline.
-
-Completed:
-- Added HLSL vertex and pixel shaders
-- Compiled shaders with `D3DCompileFromFile`
-- Created vertex shader and pixel shader objects
-- Created an input layout for `POSITION` and `COLOR`
-- Created a vertex buffer
-- Rendered one triangle
-- Extended the vertex buffer to render two triangles
-- Practiced moving triangle vertices to understand translation
-
-Result:
-The application now renders colored triangle geometry instead of only clearing the screen.
-### Milestone 3 — Camera and Movement
-
-Add basic camera control.
-
-Done when:
-
-- camera can move through the scene
-- view matrix is updated correctly
-- movement feels stable enough for testing
-
-### Milestone 4 — Porch Blockout
-
-Create the first rough version of the porch scene.
-
-Done when:
-
-- floor, railings, basic walls, and door positions exist
-- the scene is built from simple geometry
-- the player can understand the intended layout
-
-### Milestone 5 — Lighting and Materials
-
-Add the first lighting system.
-
-Done when:
-
-- one directional light affects the scene
-- objects use basic material values
-- ambient and diffuse lighting are visible
-- lighting code is understandable and documented
-
-### Milestone 6 — Doors and Interaction Zones
-
-Add doors and basic interaction logic.
-
-Done when:
-
-- doors are visible in the porch scene
-- each door has a label
-- each door has an interaction zone
-- the program can detect when the player enters or activates a door
-
-### Milestone 7 — Environment Transitions
-
-Add scene switching between environments.
-
-Done when:
-
-- porch scene exists
-- rainy environment exists
-- snowy environment exists
-- sunny environment exists
-- entering a door changes the active environment
-
-### Milestone 8 — Texturing
-
-Add basic textures to improve the visual identity.
-
-Done when:
-
-- wood texture is applied to porch geometry
-- door textures are applied
-- ground or floor textures are applied
-- basic environment textures are applied
-- texture loading is organized cleanly
-
-### Milestone 9 — Polish and GitHub Presentation
-
-Prepare the project for portfolio presentation.
-
-Done when:
-
-- screenshots are added
-- README includes build instructions
-- README includes project images
-- code is organized clearly
-- final demo state is documented
-- GitHub repository looks presentable
-
-## Repository Structure
-
-Planned structure:
-
-```text
-Doorways/
-├── assets/
-│   ├── models/
-│   ├── textures/
-│   └── shaders/
-├── docs/
-├── screenshots/
-├── src/
-├── README.md
-└── Doorways.sln

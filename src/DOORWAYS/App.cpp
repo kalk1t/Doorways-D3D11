@@ -2,11 +2,13 @@
 
 #include <d3dcompiler.h>
 #include <cstddef>
+#include <DirectXMath.h>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3dcompiler.lib")
 
+using namespace DirectX;
 
 namespace
 {
@@ -18,6 +20,13 @@ namespace
 		float Color[4];
     };
 
+    struct ConstantBuffer
+    {
+        XMFLOAT4X4 WorldViewProj;
+    };
+
+    static_assert((sizeof(ConstantBuffer) % 16) == 0,
+        "ConstantBuffer size must be a multiple of 16 bytes.");
 
     LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     {
@@ -462,20 +471,49 @@ bool App::BuildShaders()
 
 bool App::BuildGeometry()
 {
-    const float gap = 0.005f;
-
     Vertex vertices[] =
     {
-        // Triangle 1 - moved slightly DOWN
-        { { -0.5f,  0.5f - gap, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
-        { {  0.5f, -0.5f - gap, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
-        { { -0.5f, -0.5f - gap, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } },
+        // Back face corners, z = -0.5
+        { { -0.5f, -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
+        { { -0.5f,  0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
+        { {  0.5f,  0.5f, -0.5f }, { 0.0f, 0.0f, 1.0f, 1.0f } },
+        { {  0.5f, -0.5f, -0.5f }, { 1.0f, 1.0f, 0.0f, 1.0f } },
 
-        // Triangle 2 - moved slightly UP
-        { { -0.5f,  0.5f + gap, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
-        { {  0.5f,  0.5f + gap, 0.0f }, { 1.0f, 1.0f, 0.0f, 1.0f } },
-        { {  0.5f, -0.5f + gap, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
+        // Front face corners, z = +0.5
+        { { -0.5f, -0.5f,  0.5f }, { 1.0f, 0.0f, 1.0f, 1.0f } },
+        { { -0.5f,  0.5f,  0.5f }, { 0.0f, 1.0f, 1.0f, 1.0f } },
+        { {  0.5f,  0.5f,  0.5f }, { 1.0f, 1.0f, 1.0f, 1.0f } },
+        { {  0.5f, -0.5f,  0.5f }, { 0.2f, 0.2f, 0.2f, 1.0f } },
     };
+
+    unsigned short indices[] =
+    {
+        // Front face
+        0, 1, 2,
+        0, 2, 3,
+
+        // Back face
+        4, 6, 5,
+        4, 7, 6,
+
+        // Left face
+        4, 5, 1,
+        4, 1, 0,
+
+        // Right face
+        3, 2, 6,
+        3, 6, 7,
+
+        // Top face
+        1, 5, 6,
+        1, 6, 2,
+
+        // Bottom face
+        4, 0, 3,
+        4, 3, 7
+    };
+
+    mIndexCount = static_cast<UINT>(sizeof(indices) / sizeof(indices[0]));
 
     D3D11_BUFFER_DESC vertexBufferDesc = {};
 
@@ -494,6 +532,48 @@ bool App::BuildGeometry()
         &vertexBufferDesc,
         &vertexInitData,
         mVertexBuffer.GetAddressOf());
+
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    D3D11_BUFFER_DESC indexBufferDesc = {};
+
+    indexBufferDesc.ByteWidth = sizeof(indices);
+    indexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+    indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+    indexBufferDesc.CPUAccessFlags = 0;
+    indexBufferDesc.MiscFlags = 0;
+    indexBufferDesc.StructureByteStride = 0;
+
+    D3D11_SUBRESOURCE_DATA indexInitData = {};
+
+    indexInitData.pSysMem = indices;
+
+    hr = mDevice->CreateBuffer(
+        &indexBufferDesc,
+        &indexInitData,
+        mIndexBuffer.GetAddressOf());
+
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    D3D11_BUFFER_DESC constantBufferDesc = {};
+
+    constantBufferDesc.ByteWidth = sizeof(ConstantBuffer);
+    constantBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+    constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    constantBufferDesc.CPUAccessFlags = 0;
+    constantBufferDesc.MiscFlags = 0;
+    constantBufferDesc.StructureByteStride = 0;
+
+    hr = mDevice->CreateBuffer(
+        &constantBufferDesc,
+        nullptr,
+        mConstantBuffer.GetAddressOf());
 
     if (FAILED(hr))
     {
@@ -531,13 +611,86 @@ void App::Render()
 	mImmediateContext->IASetVertexBuffers(0, 1,
         mVertexBuffer.GetAddressOf(), &stride, &offset);
 
+    mImmediateContext->IASetIndexBuffer(mIndexBuffer.Get(),
+		DXGI_FORMAT_R16_UINT, 0);
+
     mImmediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	mImmediateContext->VSSetShader(mVertexShader.Get(), nullptr, 0);
 
 	mImmediateContext->PSSetShader(mPixelShader.Get(), nullptr, 0);
 
-	mImmediateContext->Draw(6, 0);
+	ID3D11Buffer* constantBuffers[] = { mConstantBuffer.Get() };
 
-    mSwapChain->Present(1, 0);
+    mImmediateContext->VSSetConstantBuffers(0, 1, constantBuffers);
+
+    XMMATRIX view = XMMatrixLookAtLH(
+        XMVectorSet(0.0f, 2.0f, -6.0f, 1.0f),//x=center,y=above the ground,z=behin the objects
+        XMVectorSet(0.0f, 0.3f, 0.5f, 1.0f),//look toward the porch area
+        XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));//up direction
+
+    float aspectRatio = 
+        static_cast<float>(mClientWidth)/static_cast<float>(mClientHeight);
+
+    XMMATRIX projection = XMMatrixPerspectiveFovLH(
+        0.25f * XM_PI,
+        aspectRatio,
+        0.1f,
+        100.0f);
+
+    XMMATRIX viewProjection = view * projection;
+
+    auto DrawBox = [&](CXMMATRIX world)
+        {
+            ConstantBuffer constantBuffer = {};
+
+            XMStoreFloat4x4(
+                &constantBuffer.WorldViewProj,
+                world * viewProjection);
+
+            mImmediateContext->UpdateSubresource(
+                mConstantBuffer.Get(),
+                0,
+                nullptr,
+                &constantBuffer,
+                0,
+                0);
+
+            mImmediateContext->DrawIndexed(
+                mIndexCount,
+                0,
+                0);
+        };
+
+    // Floor
+    XMMATRIX floorWorld =
+        XMMatrixScaling(5.0f, 0.1f, 4.0f) *
+        XMMatrixTranslation(0.0f, -0.55f, 0.0f);
+
+    DrawBox(floorWorld);
+
+    // Left door
+    XMMATRIX leftDoorWorld =
+        XMMatrixScaling(0.8f, 1.8f, 0.15f) *
+        XMMatrixTranslation(-1.5f, 0.4f, 1.2f);
+
+    DrawBox(leftDoorWorld);
+
+    // Middle door
+    XMMATRIX middleDoorWorld =
+        XMMatrixScaling(0.8f, 1.8f, 0.15f) *
+        XMMatrixTranslation(0.0f, 0.4f, 1.2f);
+
+    DrawBox(middleDoorWorld);
+
+    // Right door
+    XMMATRIX rightDoorWorld =
+        XMMatrixScaling(0.8f, 1.8f, 0.15f) *
+        XMMatrixTranslation(1.5f, 0.4f, 1.2f);
+
+    DrawBox(rightDoorWorld);
+
+
+
+	mSwapChain->Present(1, 0);
 }

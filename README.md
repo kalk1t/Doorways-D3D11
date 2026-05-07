@@ -53,46 +53,67 @@ Im using it as an learning tool, thanks OpenAI.
 
 ## Milestones
 
-### Milestone 0 — Repository and Baseline 
+## Milestone 0 — Project Setup   
 
-Create the project identity and basic structure.
+✅ Completed
 
-Done when:
+Set up the initial C++/Direct3D 11 project structure and prepared the repository for development.
 
-- Git repository exists
-- Visual Studio solution exists
-- `src/`, `assets/`, `docs/`, and `screenshots/` folders exist
-- README explains the project clearly
-- First local commit exists
+Completed:
+- Created the Doorways project
+- Set up the Visual Studio solution/project structure
+- Added the initial source files
+- Organized the project for future milestones
+- Prepared the repository for Git/GitHub version control
+- Confirmed the project builds as a clean starting point
 
-### Milestone 1 — Direct3D Window Baseline
+Result:
+The project now has a stable foundation for building the Direct3D 11 application step by step.
 
-Create a working Direct3D 11 application window.
+## Milestone 1 — Direct3D 11 Window Foundation
 
-Done when:
+✅ Completed
 
-- WinMain is working
-- Direct3D device is created
-- immediate context is created
-- swap chain is created
-- render target view is created
-- depth/stencil buffer is created
-- viewport is set
-- render loop clears the screen and calls Present
-- the application opens without linker or runtime errors
+Implemented the core Win32 and Direct3D 11 initialization layer.
 
-### Milestone 2 — First 3D Object
+Completed:
+- Created a Win32 application entry point with `WinMain`
+- Created the main `App` class
+- Registered and created a native Windows window
+- Added a message loop using `PeekMessage`
+- Initialized the Direct3D 11 device
+- Created the device context
+- Created the swap chain
+- Created the render target view
+- Created the depth/stencil buffer
+- Created the depth/stencil view
+- Bound the render target and depth/stencil view to the output merger
+- Set the viewport
+- Cleared the screen every frame
+- Presented the back buffer using the swap chain
+- Added ESC key handling to close the window
 
-Render the first simple 3D object.
+Result:
+The application now opens a native Windows window, initializes Direct3D 11, clears the screen every frame, and presents the result to the display.
 
-Done when:
+## Milestone 2 — First Geometry Rendered
 
-- a box appears on screen
-- vertex buffer is working
-- index buffer is working
-- basic shader is working
-- world/view/projection matrix pipeline is working
+✅ Completed
 
+Implemented the first Direct3D 11 geometry pipeline.
+
+Completed:
+- Added HLSL vertex and pixel shaders
+- Compiled shaders with `D3DCompileFromFile`
+- Created vertex shader and pixel shader objects
+- Created an input layout for `POSITION` and `COLOR`
+- Created a vertex buffer
+- Rendered one triangle
+- Extended the vertex buffer to render two triangles
+- Practiced moving triangle vertices to understand translation
+
+Result:
+The application now renders colored triangle geometry instead of only clearing the screen.
 ### Milestone 3 — Camera and Movement
 
 Add basic camera control.

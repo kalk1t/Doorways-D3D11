@@ -1,11 +1,23 @@
 #include "App.h"
 
+#include <d3dcompiler.h>
+#include <cstddef>
+
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
+#pragma comment(lib, "d3dcompiler.lib")
+
 
 namespace
 {
     const wchar_t* gWindowClassName = L"DoorwaysDemoWindowClass";
+
+    struct Vertex
+    {
+		float Position[3];
+		float Color[4];
+    };
+
 
     LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     {
@@ -50,6 +62,28 @@ bool App::Initialize()
         MessageBoxW(
             nullptr,
             L"Failed to initialize Direct3D 11.",
+            L"Initialization Error",
+            MB_OK | MB_ICONERROR);
+
+        return false;
+    }
+
+    if (!BuildShaders())
+    {
+        MessageBoxW(
+            nullptr,
+            L"Failed to build shaders.",
+            L"Initialization Error",
+            MB_OK | MB_ICONERROR);
+
+        return false;
+    }
+
+    if (!BuildGeometry())
+    {
+        MessageBoxW(
+            nullptr,
+            L"Failed to build geometry.",
             L"Initialization Error",
             MB_OK | MB_ICONERROR);
 
@@ -308,6 +342,166 @@ bool App::InitDirect3D()
     return true;
 }
 
+bool App::BuildShaders()
+{
+    UINT compileFlags = 0;
+
+#if defined(DEBUG) || defined(_DEBUG)
+    compileFlags |= D3DCOMPILE_DEBUG;
+    compileFlags |= D3DCOMPILE_SKIP_OPTIMIZATION;
+#endif
+
+    Microsoft::WRL::ComPtr<ID3DBlob> vertexShaderBlob;
+    Microsoft::WRL::ComPtr<ID3DBlob> pixelShaderBlob;
+    Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
+
+    HRESULT hr = D3DCompileFromFile(
+        L"Shaders\\Color.hlsl",
+        nullptr,
+        D3D_COMPILE_STANDARD_FILE_INCLUDE,
+        "VS",
+        "vs_5_0",
+        compileFlags,
+        0,
+        vertexShaderBlob.GetAddressOf(),
+        errorBlob.GetAddressOf());
+
+    if (FAILED(hr))
+    {
+        if (errorBlob)
+        {
+            OutputDebugStringA(
+                static_cast<const char*>(errorBlob->GetBufferPointer()));
+        }
+
+        return false;
+    }
+
+    hr = mDevice->CreateVertexShader(
+        vertexShaderBlob->GetBufferPointer(),
+        vertexShaderBlob->GetBufferSize(),
+        nullptr,
+        mVertexShader.GetAddressOf());
+
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    errorBlob.Reset();
+
+    hr = D3DCompileFromFile(
+        L"Shaders\\Color.hlsl",
+        nullptr,
+        D3D_COMPILE_STANDARD_FILE_INCLUDE,
+        "PS",
+        "ps_5_0",
+        compileFlags,
+        0,
+        pixelShaderBlob.GetAddressOf(),
+        errorBlob.GetAddressOf());
+
+    if (FAILED(hr))
+    {
+        if (errorBlob)
+        {
+            OutputDebugStringA(
+                static_cast<const char*>(errorBlob->GetBufferPointer()));
+        }
+
+        return false;
+    }
+
+    hr = mDevice->CreatePixelShader(
+        pixelShaderBlob->GetBufferPointer(),
+        pixelShaderBlob->GetBufferSize(),
+        nullptr,
+        mPixelShader.GetAddressOf());
+
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    D3D11_INPUT_ELEMENT_DESC inputLayoutDesc[] =
+    {
+        {
+            "POSITION",
+            0,
+            DXGI_FORMAT_R32G32B32_FLOAT,
+            0,
+            offsetof(Vertex, Position),
+            D3D11_INPUT_PER_VERTEX_DATA,
+            0
+        },
+        {
+            "COLOR",
+            0,
+            DXGI_FORMAT_R32G32B32A32_FLOAT,
+            0,
+            offsetof(Vertex, Color),
+            D3D11_INPUT_PER_VERTEX_DATA,
+            0
+        }
+    };
+
+    hr = mDevice->CreateInputLayout(
+        inputLayoutDesc,
+        2,
+        vertexShaderBlob->GetBufferPointer(),
+        vertexShaderBlob->GetBufferSize(),
+        mInputLayout.GetAddressOf());
+
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    return true;
+}
+
+bool App::BuildGeometry()
+{
+    const float gap = 0.005f;
+
+    Vertex vertices[] =
+    {
+        // Triangle 1 - moved slightly DOWN
+        { { -0.5f,  0.5f - gap, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
+        { {  0.5f, -0.5f - gap, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
+        { { -0.5f, -0.5f - gap, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } },
+
+        // Triangle 2 - moved slightly UP
+        { { -0.5f,  0.5f + gap, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
+        { {  0.5f,  0.5f + gap, 0.0f }, { 1.0f, 1.0f, 0.0f, 1.0f } },
+        { {  0.5f, -0.5f + gap, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
+    };
+
+    D3D11_BUFFER_DESC vertexBufferDesc = {};
+
+    vertexBufferDesc.ByteWidth = sizeof(vertices);
+    vertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+    vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    vertexBufferDesc.CPUAccessFlags = 0;
+    vertexBufferDesc.MiscFlags = 0;
+    vertexBufferDesc.StructureByteStride = 0;
+
+    D3D11_SUBRESOURCE_DATA vertexInitData = {};
+
+    vertexInitData.pSysMem = vertices;
+
+    HRESULT hr = mDevice->CreateBuffer(
+        &vertexBufferDesc,
+        &vertexInitData,
+        mVertexBuffer.GetAddressOf());
+
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    return true;
+}
 
 void App::Render()
 {
@@ -328,6 +522,22 @@ void App::Render()
         D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
         1.0f,
         0);
+
+	UINT stride = sizeof(Vertex);
+	UINT offset = 0;
+
+	mImmediateContext->IASetInputLayout(mInputLayout.Get());
+
+	mImmediateContext->IASetVertexBuffers(0, 1,
+        mVertexBuffer.GetAddressOf(), &stride, &offset);
+
+    mImmediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	mImmediateContext->VSSetShader(mVertexShader.Get(), nullptr, 0);
+
+	mImmediateContext->PSSetShader(mPixelShader.Get(), nullptr, 0);
+
+	mImmediateContext->Draw(6, 0);
 
     mSwapChain->Present(1, 0);
 }

@@ -53,67 +53,115 @@ Im using it as an learning tool, thanks OpenAI.
 
 ## Current Milestone
 
-## Milestone 9 — Three Weather Environments
+## Milestone 10 — Environment Polish: Making the World Feel Alive
 
 ### Goal
 
-Create three distinct environments connected to the three porch doors:
+Milestone 10 focused on making the four current spaces feel more alive and atmospheric:
 
-- Sunny
-- Rainy
-- Snowy
+- Porch
+- Sunny doorway environment
+- Rainy doorway environment
+- Snowy doorway environment
 
-Each environment has its own visual mood, lighting, backdrop, and animated weather objects.
+The goal was not realism yet. The goal was to take the simple box-based prototype and make each environment communicate a stronger mood through motion, lighting, color, and simple animated effects.
 
-### What Was Built
+---
 
-- Added per-environment lighting presets.
-- Added weather-specific clear colors.
-- Added a reusable environment backdrop panel.
-- Split environment drawing into separate functions:
-  - `DrawSunnyEnvironment`
-  - `DrawRainyEnvironment`
-  - `DrawSnowyEnvironment`
-- Added animated sunny scene:
-  - pulsing sun
-  - pulsing sun rays
-- Added animated rainy scene:
-  - falling rain streaks
-  - looping rain motion
-- Added animated snowy scene:
-  - snow patches
-  - falling snowflakes
-  - horizontal snow drift
-- Added `mEnvironmentTime` for environment animation timing.
-- Added centralized scene switching with `EnterEnvironment`.
-- Added centralized reset behavior with `ResetToPorch`.
-- Added centralized window title updates with `UpdateWindowTitle`.
-- Converted repeated weather-object code into data-driven arrays and loops.
+### Completed Features
 
-### Controls
+#### Sunny Environment
 
-- `W`, `A`, `S`, `D` — move player
-- Arrow keys — rotate camera
-- `E` — enter nearby door environment
-- `R` — reset to porch
-- `ESC` — quit
+Added a warmer, more animated sunny scene:
 
-### What I Learned
+- Animated moving clouds
+- Pulsing sun disk
+- Animated sun rays
+- Warm backdrop color
+- Stronger sunny color palette
 
-- How to use one active scene state to control rendering.
-- How to separate scene-specific drawing into different functions.
-- How to animate objects using elapsed time.
-- How to use `sinf` for smooth pulsing and drifting motion.
-- How to make repeated scene objects data-driven with arrays.
-- How lighting, clear color, materials, and geometry work together to create mood.
-- Why update logic and render logic should stay separated.
+This made the sunny environment feel brighter, warmer, and less static.
 
-### Completion Criteria
+---
 
-- Entering the Sunny door activates a warm animated sunny scene.
-- Entering the Rainy door activates a dark animated rainy scene.
-- Entering the Snowy door activates a cold animated snowy scene.
-- Each scene has its own lighting mood.
-- Each scene has its own backdrop and weather objects.
-- Weather animations restart when switching to a different environment.
-- Pressing `R` resets the project back to the porch.
+#### Rainy Environment
+
+Improved the rainy scene with more atmosphere:
+
+- Dark moving storm clouds
+- More raindrops
+- Different raindrop speeds
+- Slanted rain to suggest wind
+- Small horizontal wind drift
+- Animated puddle color pulse
+
+This made the rainy environment feel colder, darker, wetter, and more active.
+
+---
+
+#### Snowy Environment
+
+Improved the snowy scene with stronger depth and colder atmosphere:
+
+- Distant blocky mountains
+- Snow caps on mountains
+- Moving mist/fog band
+- More falling snowflakes
+- Different snowflake sizes
+- Different snowflake fall speeds
+- Sideways snow drift
+- More snow patches on the ground
+
+This made the snowy environment feel quieter, deeper, and more atmospheric.
+
+---
+
+#### Doorway Atmosphere
+
+Added animated doorway glow effects:
+
+- Sunny door has warm orange glow
+- Rainy door has blue glow
+- Snowy door has pale cyan glow
+- Nearby door glow pulses stronger
+- Active environment door stays brighter
+
+This made the doors feel more like portals instead of simple colored boxes.
+
+---
+
+#### Porch Lighting
+
+Added subtle breathing light to the porch:
+
+- Warm light slowly changes intensity
+- Ambient light gently pulses
+- Porch feels more alive even before entering a door
+
+This improved the main hub area and made the starting scene feel less static.
+
+---
+
+### Technical Concepts Practiced
+
+This milestone practiced several important graphics programming ideas:
+
+- Time-based animation using `deltaTime`
+- Sine-wave animation with `sinf`
+- Reusing one cube mesh for many different objects
+- Creating atmosphere through color and motion
+- Simple particle-like effects using repeated geometry
+- Environment-specific lighting
+- Draw order for visual layering
+- Organizing scene behavior by environment state
+
+---
+
+### Important Code Ideas
+
+The project now uses `mEnvironmentTime` to animate environment effects over time.
+
+Examples:
+
+```cpp
+float pulse = 0.5f + 0.5f * sinf(mEnvironmentTime * speed);

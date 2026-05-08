@@ -1300,10 +1300,29 @@ void App::UpdateLightingConstants()
     case DoorId::None:
     default:
         // Porch/default scene:
-        // Neutral base lighting before entering a door.
-        perFrameData.LightDirection = XMFLOAT4(0.577f, -0.577f, 0.577f, 0.0f);
-        perFrameData.LightColor = XMFLOAT4(0.85f, 0.85f, 0.80f, 1.0f);
-        perFrameData.AmbientColor = XMFLOAT4(0.20f, 0.20f, 0.25f, 1.0f);
+        // Subtle breathing light to make the porch feel alive.
+        float porchPulse = 0.5f + 0.5f * sinf(mEnvironmentTime * 1.25f);
+
+        float warmStrength = 0.78f + porchPulse * 0.12f;
+        float ambientStrength = 0.18f + porchPulse * 0.05f;
+
+        perFrameData.LightDirection = XMFLOAT4(
+            0.577f,
+            -0.577f,
+            0.577f,
+            0.0f);
+
+        perFrameData.LightColor = XMFLOAT4(
+            warmStrength,
+            warmStrength * 0.92f,
+            warmStrength * 0.78f,
+            1.0f);
+
+        perFrameData.AmbientColor = XMFLOAT4(
+            ambientStrength,
+            ambientStrength,
+            ambientStrength + 0.04f,
+            1.0f);
         break;
     }
 
@@ -1476,6 +1495,8 @@ void App::DrawScene(const XMMATRIX& viewProjection)
 
     DrawBox(floorWorld, viewProjection, floorMaterial);
 
+    DrawDoorwayAtmosphere(viewProjection);
+
     XMMATRIX leftDoorWorld = MakeWorld(
         gDoorWidth, gDoorHeight, gDoorDepth,
         gSunnyDoorX, gDoorY, gDoorZ);
@@ -1640,6 +1661,93 @@ void App::DrawSunnyEnvironment(const XMMATRIX& viewProjection)
         viewProjection,
         XMFLOAT4(0.95f, 0.68f, 0.28f, 1.0f));
 
+    auto GetCloudX = [this](float startX, float speed) -> float
+        {
+            constexpr float minX = -2.70f;
+            constexpr float maxX = 2.70f;
+            constexpr float range = maxX - minX;
+
+            float x = startX + mEnvironmentTime * speed;
+
+            while (x > maxX)
+            {
+                x -= range;
+            }
+
+            while (x < minX)
+            {
+                x += range;
+            }
+
+            return x;
+        };
+
+    Material cloudMaterial =
+    {
+        XMFLOAT4(0.96f, 0.90f, 0.72f, 1.0f),
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+        mDiffuseTextureView.Get()
+    };
+
+    struct Cloud
+    {
+        float StartX;
+        float Y;
+        float Speed;
+        float Scale;
+    };
+
+    const Cloud clouds[] =
+    {
+        { -2.20f, 2.70f, 0.18f, 1.00f },
+        {  0.40f, 2.88f, 0.12f, 0.75f },
+        {  1.80f, 2.20f, 0.15f, 0.85f }
+    };
+
+    for (const Cloud& cloud : clouds)
+    {
+        float cloudX = GetCloudX(cloud.StartX, cloud.Speed);
+
+        XMMATRIX cloudCenterWorld = MakeWorld(
+            0.55f * cloud.Scale,
+            0.14f * cloud.Scale,
+            0.04f,
+            cloudX,
+            cloud.Y,
+            1.02f);
+
+        DrawBox(
+            cloudCenterWorld,
+            viewProjection,
+            cloudMaterial);
+
+        XMMATRIX cloudLeftWorld = MakeWorld(
+            0.28f * cloud.Scale,
+            0.22f * cloud.Scale,
+            0.04f,
+            cloudX - 0.28f * cloud.Scale,
+            cloud.Y + 0.05f * cloud.Scale,
+            1.02f);
+
+        DrawBox(
+            cloudLeftWorld,
+            viewProjection,
+            cloudMaterial);
+
+        XMMATRIX cloudRightWorld = MakeWorld(
+            0.34f * cloud.Scale,
+            0.20f * cloud.Scale,
+            0.04f,
+            cloudX + 0.32f * cloud.Scale,
+            cloud.Y + 0.04f * cloud.Scale,
+            1.02f);
+
+        DrawBox(
+            cloudRightWorld,
+            viewProjection,
+            cloudMaterial);
+    }
+
     float pulse = 0.5f + 0.5f * sinf(mEnvironmentTime * 2.0f);
 
     float sunScale = 0.45f + pulse * 0.08f;
@@ -1730,6 +1838,80 @@ void App::DrawRainyEnvironment(const XMMATRIX& viewProjection)
         viewProjection,
         XMFLOAT4(0.10f, 0.16f, 0.28f, 1.0f));
 
+    Material cloudMaterial =
+    {
+        XMFLOAT4(0.06f, 0.08f, 0.12f, 1.0f),
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+        mDiffuseTextureView.Get()
+    };
+
+    auto GetStormCloudX = [this](float startX, float speed) -> float
+        {
+            constexpr float minX = -2.80f;
+            constexpr float maxX = 2.80f;
+            constexpr float range = maxX - minX;
+
+            float x = startX + mEnvironmentTime * speed;
+
+            while (x > maxX)
+            {
+                x -= range;
+            }
+
+            while (x < minX)
+            {
+                x += range;
+            }
+
+            return x;
+        };
+
+    struct StormCloud
+    {
+        float StartX;
+        float Y;
+        float Speed;
+        float Scale;
+    };
+
+    const StormCloud stormClouds[] =
+    {
+        { -2.00f, 2.72f, 0.10f, 1.10f },
+        { -0.30f, 2.88f, 0.07f, 0.95f },
+        {  1.40f, 2.68f, 0.09f, 1.05f }
+    };
+
+    for (const StormCloud& cloud : stormClouds)
+    {
+        float cloudX = GetStormCloudX(cloud.StartX, cloud.Speed);
+
+        XMMATRIX cloudBodyWorld = MakeWorld(
+            0.85f * cloud.Scale,
+            0.18f * cloud.Scale,
+            0.04f,
+            cloudX,
+            cloud.Y,
+            1.02f);
+
+        DrawBox(
+            cloudBodyWorld,
+            viewProjection,
+            cloudMaterial);
+
+        XMMATRIX cloudTopWorld = MakeWorld(
+            0.45f * cloud.Scale,
+            0.22f * cloud.Scale,
+            0.04f,
+            cloudX - 0.20f * cloud.Scale,
+            cloud.Y + 0.10f * cloud.Scale,
+            1.02f);
+
+        DrawBox(
+            cloudTopWorld,
+            viewProjection,
+            cloudMaterial);
+    }
+
     Material rainMaterial =
     {
         XMFLOAT4(0.25f, 0.55f, 1.0f, 1.0f),
@@ -1737,14 +1919,13 @@ void App::DrawRainyEnvironment(const XMMATRIX& viewProjection)
         mDiffuseTextureView.Get()
     };
 
-    auto GetRainY = [this](float startY) -> float
+    auto GetRainY = [this](float startY, float speed) -> float
         {
-            constexpr float minY = 1.75f;
-            constexpr float maxY = 2.75f;
+            constexpr float minY = 1.45f;
+            constexpr float maxY = 2.85f;
             constexpr float range = maxY - minY;
-            constexpr float fallSpeed = 1.20f;
 
-            float y = startY - mEnvironmentTime * fallSpeed;
+            float y = startY - mEnvironmentTime * speed;
 
             while (y < minY)
             {
@@ -1759,37 +1940,101 @@ void App::DrawRainyEnvironment(const XMMATRIX& viewProjection)
             return y;
         };
 
+    auto GetRainX = [this](float startX, float phase) -> float
+        {
+            constexpr float windAmount = 0.10f;
+            constexpr float windSpeed = 4.0f;
+
+            return startX + sinf(mEnvironmentTime * windSpeed + phase) * windAmount;
+        };
+
     struct RainDrop
     {
         float X;
         float StartY;
+        float Speed;
+        float Length;
+        float Phase;
     };
 
     const RainDrop rainDrops[] =
     {
-        { -1.80f, 2.25f },
-        { -1.20f, 2.55f },
-        { -0.60f, 2.20f },
-        {  0.00f, 2.50f },
-        {  0.60f, 2.15f },
-        {  1.20f, 2.45f },
-        {  1.80f, 2.25f }
+        { -2.10f, 2.35f, 1.60f, 0.55f, 0.0f },
+        { -1.70f, 2.70f, 1.35f, 0.45f, 0.7f },
+        { -1.25f, 2.15f, 1.80f, 0.60f, 1.4f },
+        { -0.85f, 2.60f, 1.45f, 0.50f, 2.1f },
+        { -0.40f, 2.30f, 1.70f, 0.55f, 2.8f },
+        {  0.00f, 2.80f, 1.30f, 0.45f, 3.5f },
+        {  0.45f, 2.20f, 1.90f, 0.65f, 4.2f },
+        {  0.85f, 2.65f, 1.50f, 0.50f, 4.9f },
+        {  1.30f, 2.25f, 1.75f, 0.60f, 5.6f },
+        {  1.75f, 2.75f, 1.40f, 0.45f, 6.3f },
+        {  2.15f, 2.40f, 1.65f, 0.55f, 7.0f }
     };
 
     for (const RainDrop& drop : rainDrops)
     {
-        XMMATRIX rainWorld = MakeWorld(
-            0.05f,
-            0.55f,
-            0.05f,
-            drop.X,
-            GetRainY(drop.StartY),
+        float x = GetRainX(drop.X, drop.Phase);
+        float y = GetRainY(drop.StartY, drop.Speed);
+
+        XMMATRIX rainScale = XMMatrixScaling(
+            0.04f,
+            drop.Length,
+            0.04f);
+
+        XMMATRIX rainSlant = XMMatrixRotationZ(-0.18f);
+
+        XMMATRIX rainTranslation = XMMatrixTranslation(
+            x,
+            y,
             1.00f);
+
+        XMMATRIX rainWorld = rainScale * rainSlant * rainTranslation;
 
         DrawBox(
             rainWorld,
             viewProjection,
             rainMaterial);
+    }
+
+    float puddlePulse = 0.5f + 0.5f * sinf(mEnvironmentTime * 3.0f);
+
+    Material puddleMaterial =
+    {
+        XMFLOAT4(0.10f, 0.22f + puddlePulse * 0.06f, 0.34f + puddlePulse * 0.08f, 1.0f),
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+        mDiffuseTextureView.Get()
+    };
+
+    struct Puddle
+    {
+        float ScaleX;
+        float ScaleZ;
+        float X;
+        float Z;
+    };
+
+    const Puddle puddles[] =
+    {
+        { 0.70f, 0.20f, -1.30f, -0.90f },
+        { 0.55f, 0.18f,  0.20f, -0.35f },
+        { 0.80f, 0.22f,  1.30f, -1.10f }
+    };
+
+    for (const Puddle& puddle : puddles)
+    {
+        XMMATRIX puddleWorld = MakeWorld(
+            puddle.ScaleX,
+            0.025f,
+            puddle.ScaleZ,
+            puddle.X,
+            -0.48f,
+            puddle.Z);
+
+        DrawBox(
+            puddleWorld,
+            viewProjection,
+            puddleMaterial);
     }
 }
 
@@ -1798,6 +2043,86 @@ void App::DrawSnowyEnvironment(const XMMATRIX& viewProjection)
     DrawEnvironmentBackdrop(
         viewProjection,
         XMFLOAT4(0.72f, 0.86f, 0.96f, 1.0f));
+
+    Material mountainMaterial =
+    {
+        XMFLOAT4(0.50f, 0.62f, 0.72f, 1.0f),
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+        mDiffuseTextureView.Get()
+    };
+
+    Material mountainSnowMaterial =
+    {
+        XMFLOAT4(0.88f, 0.94f, 1.0f, 1.0f),
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+        mDiffuseTextureView.Get()
+    };
+
+    struct Mountain
+    {
+        float X;
+        float BaseY;
+        float ScaleX;
+        float ScaleY;
+    };
+
+    const Mountain mountains[] =
+    {
+        { -1.70f, 1.10f, 1.00f, 1.40f },
+        {  0.00f, 1.00f, 1.35f, 1.65f },
+        {  1.65f, 1.12f, 0.95f, 1.30f }
+    };
+
+    for (const Mountain& mountain : mountains)
+    {
+        XMMATRIX mountainWorld = MakeWorld(
+            mountain.ScaleX,
+            mountain.ScaleY,
+            0.04f,
+            mountain.X,
+            mountain.BaseY,
+            1.03f);
+
+        DrawBox(
+            mountainWorld,
+            viewProjection,
+            mountainMaterial);
+
+        XMMATRIX snowCapWorld = MakeWorld(
+            mountain.ScaleX * 0.45f,
+            mountain.ScaleY * 0.22f,
+            0.04f,
+            mountain.X,
+            mountain.BaseY + mountain.ScaleY * 0.42f,
+            1.01f);
+
+        DrawBox(
+            snowCapWorld,
+            viewProjection,
+            mountainSnowMaterial);
+    }
+
+    float mistOffset = sinf(mEnvironmentTime * 0.55f) * 0.15f;
+
+    Material mistMaterial =
+    {
+        XMFLOAT4(0.82f, 0.92f, 1.0f, 1.0f),
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+        mDiffuseTextureView.Get()
+    };
+
+    XMMATRIX mistWorld = MakeWorld(
+        4.80f,
+        0.16f,
+        0.035f,
+        mistOffset,
+        1.38f,
+        0.99f);
+
+    DrawBox(
+        mistWorld,
+        viewProjection,
+        mistMaterial);
 
     Material snowMaterial =
     {
@@ -1825,9 +2150,10 @@ void App::DrawSnowyEnvironment(const XMMATRIX& viewProjection)
 
     const SnowPatch snowPatches[] =
     {
-        { 0.75f, 0.05f, 0.45f, -1.0f, -0.46f, -0.75f },
-        { 0.90f, 0.05f, 0.45f,  0.0f, -0.45f,  0.05f },
-        { 0.75f, 0.05f, 0.45f,  1.0f, -0.46f, -0.75f }
+        { 0.75f, 0.05f, 0.45f, -1.55f, -0.46f, -0.95f },
+        { 0.90f, 0.05f, 0.45f, -0.55f, -0.45f,  0.05f },
+        { 0.85f, 0.05f, 0.45f,  0.55f, -0.46f, -0.75f },
+        { 0.70f, 0.05f, 0.45f,  1.55f, -0.45f,  0.05f }
     };
 
     for (const SnowPatch& patch : snowPatches)
@@ -1846,14 +2172,13 @@ void App::DrawSnowyEnvironment(const XMMATRIX& viewProjection)
             snowMaterial);
     }
 
-    auto GetSnowY = [this](float startY) -> float
+    auto GetSnowY = [this](float startY, float speed) -> float
         {
-            constexpr float minY = 1.45f;
-            constexpr float maxY = 2.75f;
+            constexpr float minY = 1.25f;
+            constexpr float maxY = 2.90f;
             constexpr float range = maxY - minY;
-            constexpr float fallSpeed = 0.35f;
 
-            float y = startY - mEnvironmentTime * fallSpeed;
+            float y = startY - mEnvironmentTime * speed;
 
             while (y < minY)
             {
@@ -1868,12 +2193,14 @@ void App::DrawSnowyEnvironment(const XMMATRIX& viewProjection)
             return y;
         };
 
-    auto GetSnowX = [this](float startX, float phase) -> float
+    auto GetSnowX = [this](float startX, float phase, float driftAmount) -> float
         {
-            constexpr float driftAmount = 0.12f;
-            constexpr float driftSpeed = 1.25f;
+            constexpr float driftSpeed = 1.15f;
 
-            return startX + sinf(mEnvironmentTime * driftSpeed + phase) * driftAmount;
+            float slowDrift = sinf(mEnvironmentTime * driftSpeed + phase) * driftAmount;
+            float windPush = sinf(mEnvironmentTime * 0.35f) * 0.10f;
+
+            return startX + slowDrift + windPush;
         };
 
     struct Snowflake
@@ -1881,31 +2208,120 @@ void App::DrawSnowyEnvironment(const XMMATRIX& viewProjection)
         float StartX;
         float StartY;
         float Phase;
+        float Speed;
+        float Size;
+        float Drift;
     };
 
     const Snowflake snowflakes[] =
     {
-        { -1.60f, 2.35f, 0.0f },
-        { -0.80f, 2.65f, 1.7f },
-        {  0.00f, 2.30f, 3.1f },
-        {  0.80f, 2.60f, 4.5f },
-        {  1.60f, 2.35f, 5.8f }
+        { -2.10f, 2.35f, 0.0f, 0.26f, 0.08f, 0.10f },
+        { -1.65f, 2.75f, 1.1f, 0.32f, 0.11f, 0.16f },
+        { -1.15f, 2.45f, 2.2f, 0.22f, 0.07f, 0.12f },
+        { -0.70f, 2.85f, 3.3f, 0.36f, 0.10f, 0.18f },
+        { -0.20f, 2.30f, 4.4f, 0.28f, 0.09f, 0.14f },
+        {  0.25f, 2.70f, 5.5f, 0.24f, 0.07f, 0.10f },
+        {  0.75f, 2.40f, 6.6f, 0.34f, 0.12f, 0.18f },
+        {  1.20f, 2.80f, 7.7f, 0.25f, 0.08f, 0.13f },
+        {  1.70f, 2.50f, 8.8f, 0.30f, 0.10f, 0.16f },
+        {  2.15f, 2.90f, 9.9f, 0.21f, 0.07f, 0.11f }
     };
 
     for (const Snowflake& flake : snowflakes)
     {
+        float x = GetSnowX(
+            flake.StartX,
+            flake.Phase,
+            flake.Drift);
+
+        float y = GetSnowY(
+            flake.StartY,
+            flake.Speed);
+
         XMMATRIX flakeWorld = MakeWorld(
-            0.10f,
-            0.10f,
+            flake.Size,
+            flake.Size,
             0.04f,
-            GetSnowX(flake.StartX, flake.Phase),
-            GetSnowY(flake.StartY),
-            1.00f);
+            x,
+            y,
+            0.98f);
 
         DrawBox(
             flakeWorld,
             viewProjection,
             snowflakeMaterial);
+    }
+}
+
+void App::DrawDoorwayAtmosphere(const XMMATRIX& viewProjection)
+{
+    struct DoorGlow
+    {
+        DoorId Door;
+        XMFLOAT4 BaseColor;
+    };
+
+    const DoorGlow glows[] =
+    {
+        { DoorId::Sunny, XMFLOAT4(1.00f, 0.62f, 0.12f, 1.0f) },
+        { DoorId::Rainy, XMFLOAT4(0.18f, 0.45f, 1.00f, 1.0f) },
+        { DoorId::Snowy, XMFLOAT4(0.75f, 0.95f, 1.00f, 1.0f) }
+    };
+
+    float pulse = 0.5f + 0.5f * sinf(mEnvironmentTime * 3.0f);
+
+    for (const DoorGlow& glow : glows)
+    {
+        float intensity = 0.35f;
+
+        if (mNearbyDoor == glow.Door)
+        {
+            intensity = 0.65f + pulse * 0.25f;
+        }
+
+        if (mActiveDoor == glow.Door)
+        {
+            intensity = 0.85f + pulse * 0.15f;
+        }
+
+        Material glowMaterial =
+        {
+            XMFLOAT4(
+                glow.BaseColor.x * intensity,
+                glow.BaseColor.y * intensity,
+                glow.BaseColor.z * intensity,
+                1.0f),
+            XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+            mDiffuseTextureView.Get()
+        };
+
+        float doorX = GetDoorX(glow.Door);
+
+        XMMATRIX glowWorld = MakeWorld(
+            gDoorWidth + 0.35f,
+            gDoorHeight + 0.45f,
+            0.04f,
+            doorX,
+            gDoorY + 0.05f,
+            gDoorZ + 0.04f);
+
+        DrawBox(
+            glowWorld,
+            viewProjection,
+            glowMaterial);
+
+        XMMATRIX smallTopGlowWorld = MakeWorld(
+            gDoorWidth + 0.65f + pulse * 0.12f,
+            0.08f,
+            0.04f,
+            doorX,
+            gDoorY + gDoorHeight * 0.55f + 0.30f,
+            gDoorZ + 0.02f);
+
+        DrawBox(
+            smallTopGlowWorld,
+            viewProjection,
+            glowMaterial);
     }
 }
 

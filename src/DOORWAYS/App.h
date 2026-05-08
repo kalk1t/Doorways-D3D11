@@ -63,7 +63,7 @@ private:
     void DrawInteractionPrompt(const XMMATRIX& viewProjection);
     void DrawEnvironmentObjects(const XMMATRIX& viewProjection);
     void DrawEnvironmentBackdrop( const XMMATRIX& viewProjection,const XMFLOAT4& color);
-
+    void DrawDoorwayAtmosphere(const XMMATRIX& viewProjection);
 
     void DrawSunnyEnvironment(const XMMATRIX& viewProjection);
     void DrawRainyEnvironment(const XMMATRIX& viewProjection);

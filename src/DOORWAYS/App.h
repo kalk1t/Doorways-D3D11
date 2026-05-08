@@ -62,12 +62,22 @@ private:
     void DrawPlayer(const XMMATRIX& viewProjection);
     void DrawInteractionPrompt(const XMMATRIX& viewProjection);
     void DrawEnvironmentObjects(const XMMATRIX& viewProjection);
+    void DrawEnvironmentBackdrop( const XMMATRIX& viewProjection,const XMFLOAT4& color);
+
+
+    void DrawSunnyEnvironment(const XMMATRIX& viewProjection);
+    void DrawRainyEnvironment(const XMMATRIX& viewProjection);
+    void DrawSnowyEnvironment(const XMMATRIX& viewProjection);
+
 
     DoorId GetNearbyDoor() const;
     const wchar_t* GetDoorDisplayName(DoorId door) const;
 	float GetDoorX(DoorId door) const;
     void UpdateDoorInteractionFeedback();
     void HandleDoorInteraction();
+    void EnterEnvironment(DoorId door);
+	void ResetToPorch();
+    void UpdateWindowTitle();
 
 
 
@@ -126,6 +136,8 @@ private:
 
     DoorId mNearbyDoor = DoorId::None;
     DoorId mActiveDoor = DoorId::None;
+
+    float mEnvironmentTime = 0.0f;
 
     bool mWasInteractKeyDown = false;
 };

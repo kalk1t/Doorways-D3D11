@@ -1271,9 +1271,41 @@ void App::UpdateLightingConstants()
 {
     PerFrameConstantBuffer perFrameData = {};
 
-    perFrameData.LightDirection = XMFLOAT4(0.577f, -0.577f, 0.577f, 0.0f);
-    perFrameData.LightColor = XMFLOAT4(0.85f, 0.85f, 0.80f, 1.0f);
-    perFrameData.AmbientColor = XMFLOAT4(0.20f, 0.20f, 0.25f, 1.0f);
+    switch (mActiveDoor)
+    {
+    case DoorId::Sunny:
+        // Sunny scene:
+        // Stronger warm light, like sunlight.
+        perFrameData.LightDirection = XMFLOAT4(0.45f, -0.75f, 0.35f, 0.0f);
+        perFrameData.LightColor = XMFLOAT4(1.00f, 0.90f, 0.65f, 1.0f);
+        perFrameData.AmbientColor = XMFLOAT4(0.32f, 0.28f, 0.20f, 1.0f);
+        break;
+
+    case DoorId::Rainy:
+        // Rainy scene:
+        // Dimmer, colder blue-gray lighting.
+        perFrameData.LightDirection = XMFLOAT4(0.20f, -0.65f, 0.55f, 0.0f);
+        perFrameData.LightColor = XMFLOAT4(0.45f, 0.55f, 0.75f, 1.0f);
+        perFrameData.AmbientColor = XMFLOAT4(0.10f, 0.13f, 0.18f, 1.0f);
+        break;
+
+    case DoorId::Snowy:
+        // Snowy scene:
+        // Cold pale light with more ambient brightness.
+        perFrameData.LightDirection = XMFLOAT4(-0.35f, -0.80f, 0.25f, 0.0f);
+        perFrameData.LightColor = XMFLOAT4(0.78f, 0.88f, 1.00f, 1.0f);
+        perFrameData.AmbientColor = XMFLOAT4(0.35f, 0.40f, 0.45f, 1.0f);
+        break;
+
+    case DoorId::None:
+    default:
+        // Porch/default scene:
+        // Neutral base lighting before entering a door.
+        perFrameData.LightDirection = XMFLOAT4(0.577f, -0.577f, 0.577f, 0.0f);
+        perFrameData.LightColor = XMFLOAT4(0.85f, 0.85f, 0.80f, 1.0f);
+        perFrameData.AmbientColor = XMFLOAT4(0.20f, 0.20f, 0.25f, 1.0f);
+        break;
+    }
 
     mImmediateContext->UpdateSubresource(
         mPerFrameConstantBuffer.Get(),
@@ -1557,114 +1589,323 @@ void App::DrawInteractionPrompt(const XMMATRIX& viewProjection)
 
 void App::DrawEnvironmentObjects(const XMMATRIX& viewProjection)
 {
-    if (mActiveDoor == DoorId::None)
+    switch (mActiveDoor)
     {
-        return;
-    }
+    case DoorId::Sunny:
+        DrawSunnyEnvironment(viewProjection);
+        break;
 
-    if (mActiveDoor == DoorId::Sunny)
+    case DoorId::Rainy:
+        DrawRainyEnvironment(viewProjection);
+        break;
+
+    case DoorId::Snowy:
+        DrawSnowyEnvironment(viewProjection);
+        break;
+
+    case DoorId::None:
+    default:
+        break;
+    }
+}
+
+void App::DrawEnvironmentBackdrop(
+    const XMMATRIX& viewProjection,
+    const XMFLOAT4& color)
+{
+    Material backdropMaterial =
     {
-        Material sunMaterial =
+        color,
+        XMFLOAT4(2.0f, 2.0f, 0.0f, 0.0f),
+        mDiffuseTextureView.Get()
+    };
+
+    XMMATRIX backdropWorld = MakeWorld(
+        5.40f,
+        2.60f,
+        0.05f,
+        0.0f,
+        0.80f,
+        1.55f);
+
+    DrawBox(
+        backdropWorld,
+        viewProjection,
+        backdropMaterial);
+}
+
+void App::DrawSunnyEnvironment(const XMMATRIX& viewProjection)
+{
+    DrawEnvironmentBackdrop(
+        viewProjection,
+        XMFLOAT4(0.95f, 0.68f, 0.28f, 1.0f));
+
+    float pulse = 0.5f + 0.5f * sinf(mEnvironmentTime * 2.0f);
+
+    float sunScale = 0.45f + pulse * 0.08f;
+    float rayScale = 1.0f + pulse * 0.25f;
+
+    Material sunMaterial =
+    {
+        XMFLOAT4(1.0f, 0.85f + pulse * 0.10f, 0.10f, 1.0f),
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+        mDiffuseTextureView.Get()
+    };
+
+    Material rayMaterial =
+    {
+        XMFLOAT4(1.0f, 0.70f + pulse * 0.15f, 0.15f, 1.0f),
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+        mDiffuseTextureView.Get()
+    };
+
+    XMMATRIX sunWorld = MakeWorld(
+        sunScale,
+        sunScale,
+        0.08f,
+        0.0f,
+        2.45f,
+        1.00f);
+
+    DrawBox(
+        sunWorld,
+        viewProjection,
+        sunMaterial);
+
+    struct SunRay
+    {
+        float BaseScaleX;
+        float BaseScaleY;
+        float ScaleZ;
+        float X;
+        float Y;
+        float Z;
+        bool AnimateX;
+        bool AnimateY;
+    };
+
+    const SunRay rays[] =
+    {
+        // Top ray
+        { 0.10f, 0.35f, 0.06f,  0.00f, 2.95f, 1.00f, false, true },
+
+        // Bottom ray
+        { 0.10f, 0.35f, 0.06f,  0.00f, 1.95f, 1.00f, false, true },
+
+        // Left ray
+        { 0.35f, 0.10f, 0.06f, -0.50f, 2.45f, 1.00f, true, false },
+
+        // Right ray
+        { 0.35f, 0.10f, 0.06f,  0.50f, 2.45f, 1.00f, true, false }
+    };
+
+    for (const SunRay& ray : rays)
+    {
+        float scaleX = ray.AnimateX
+            ? ray.BaseScaleX * rayScale
+            : ray.BaseScaleX;
+
+        float scaleY = ray.AnimateY
+            ? ray.BaseScaleY * rayScale
+            : ray.BaseScaleY;
+
+        XMMATRIX rayWorld = MakeWorld(
+            scaleX,
+            scaleY,
+            ray.ScaleZ,
+            ray.X,
+            ray.Y,
+            ray.Z);
+
+        DrawBox(
+            rayWorld,
+            viewProjection,
+            rayMaterial);
+    }
+}
+
+void App::DrawRainyEnvironment(const XMMATRIX& viewProjection)
+{
+    DrawEnvironmentBackdrop(
+        viewProjection,
+        XMFLOAT4(0.10f, 0.16f, 0.28f, 1.0f));
+
+    Material rainMaterial =
+    {
+        XMFLOAT4(0.25f, 0.55f, 1.0f, 1.0f),
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+        mDiffuseTextureView.Get()
+    };
+
+    auto GetRainY = [this](float startY) -> float
         {
-            XMFLOAT4(1.0f, 0.85f, 0.10f, 1.0f),
-            XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
-            mDiffuseTextureView.Get()
+            constexpr float minY = 1.75f;
+            constexpr float maxY = 2.75f;
+            constexpr float range = maxY - minY;
+            constexpr float fallSpeed = 1.20f;
+
+            float y = startY - mEnvironmentTime * fallSpeed;
+
+            while (y < minY)
+            {
+                y += range;
+            }
+
+            while (y > maxY)
+            {
+                y -= range;
+            }
+
+            return y;
         };
 
-        XMMATRIX sunWorld = MakeWorld(
-            0.45f,
-            0.45f,
-            0.08f,
-            0.0f,
-            2.45f,
+    struct RainDrop
+    {
+        float X;
+        float StartY;
+    };
+
+    const RainDrop rainDrops[] =
+    {
+        { -1.80f, 2.25f },
+        { -1.20f, 2.55f },
+        { -0.60f, 2.20f },
+        {  0.00f, 2.50f },
+        {  0.60f, 2.15f },
+        {  1.20f, 2.45f },
+        {  1.80f, 2.25f }
+    };
+
+    for (const RainDrop& drop : rainDrops)
+    {
+        XMMATRIX rainWorld = MakeWorld(
+            0.05f,
+            0.55f,
+            0.05f,
+            drop.X,
+            GetRainY(drop.StartY),
             1.00f);
 
         DrawBox(
-            sunWorld,
+            rainWorld,
             viewProjection,
-            sunMaterial);
+            rainMaterial);
+    }
+}
 
-        return;
+void App::DrawSnowyEnvironment(const XMMATRIX& viewProjection)
+{
+    DrawEnvironmentBackdrop(
+        viewProjection,
+        XMFLOAT4(0.72f, 0.86f, 0.96f, 1.0f));
+
+    Material snowMaterial =
+    {
+        XMFLOAT4(0.90f, 0.95f, 1.0f, 1.0f),
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+        mDiffuseTextureView.Get()
+    };
+
+    Material snowflakeMaterial =
+    {
+        XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+        mDiffuseTextureView.Get()
+    };
+
+    struct SnowPatch
+    {
+        float ScaleX;
+        float ScaleY;
+        float ScaleZ;
+        float X;
+        float Y;
+        float Z;
+    };
+
+    const SnowPatch snowPatches[] =
+    {
+        { 0.75f, 0.05f, 0.45f, -1.0f, -0.46f, -0.75f },
+        { 0.90f, 0.05f, 0.45f,  0.0f, -0.45f,  0.05f },
+        { 0.75f, 0.05f, 0.45f,  1.0f, -0.46f, -0.75f }
+    };
+
+    for (const SnowPatch& patch : snowPatches)
+    {
+        XMMATRIX snowWorld = MakeWorld(
+            patch.ScaleX,
+            patch.ScaleY,
+            patch.ScaleZ,
+            patch.X,
+            patch.Y,
+            patch.Z);
+
+        DrawBox(
+            snowWorld,
+            viewProjection,
+            snowMaterial);
     }
 
-    if (mActiveDoor == DoorId::Rainy)
-    {
-        Material rainMaterial =
+    auto GetSnowY = [this](float startY) -> float
         {
-            XMFLOAT4(0.25f, 0.55f, 1.0f, 1.0f),
-            XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
-            mDiffuseTextureView.Get()
+            constexpr float minY = 1.45f;
+            constexpr float maxY = 2.75f;
+            constexpr float range = maxY - minY;
+            constexpr float fallSpeed = 0.35f;
+
+            float y = startY - mEnvironmentTime * fallSpeed;
+
+            while (y < minY)
+            {
+                y += range;
+            }
+
+            while (y > maxY)
+            {
+                y -= range;
+            }
+
+            return y;
         };
 
-        XMMATRIX rainLeftWorld = MakeWorld(
-            0.06f,
-            0.50f,
-            0.06f,
-            -0.75f,
-            2.30f,
-            1.00f);
-
-        XMMATRIX rainMiddleWorld = MakeWorld(
-            0.06f,
-            0.50f,
-            0.06f,
-            0.0f,
-            2.30f,
-            1.00f);
-
-        XMMATRIX rainRightWorld = MakeWorld(
-            0.06f,
-            0.50f,
-            0.06f,
-            0.75f,
-            2.30f,
-            1.00f);
-
-        DrawBox(rainLeftWorld, viewProjection, rainMaterial);
-        DrawBox(rainMiddleWorld, viewProjection, rainMaterial);
-        DrawBox(rainRightWorld, viewProjection, rainMaterial);
-
-        return;
-    }
-
-    if (mActiveDoor == DoorId::Snowy)
-    {
-        Material snowMaterial =
+    auto GetSnowX = [this](float startX, float phase) -> float
         {
-            XMFLOAT4(0.90f, 0.95f, 1.0f, 1.0f),
-            XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
-            mDiffuseTextureView.Get()
+            constexpr float driftAmount = 0.12f;
+            constexpr float driftSpeed = 1.25f;
+
+            return startX + sinf(mEnvironmentTime * driftSpeed + phase) * driftAmount;
         };
 
-        XMMATRIX snowLeftWorld = MakeWorld(
-            0.75f,
-            0.05f,
-            0.45f,
-            -1.0f,
-            -0.46f,
-            -0.75f);
+    struct Snowflake
+    {
+        float StartX;
+        float StartY;
+        float Phase;
+    };
 
-        XMMATRIX snowMiddleWorld = MakeWorld(
-            0.90f,
-            0.05f,
-            0.45f,
-            0.0f,
-            -0.45f,
-            0.05f);
+    const Snowflake snowflakes[] =
+    {
+        { -1.60f, 2.35f, 0.0f },
+        { -0.80f, 2.65f, 1.7f },
+        {  0.00f, 2.30f, 3.1f },
+        {  0.80f, 2.60f, 4.5f },
+        {  1.60f, 2.35f, 5.8f }
+    };
 
-        XMMATRIX snowRightWorld = MakeWorld(
-            0.75f,
-            0.05f,
-            0.45f,
-            1.0f,
-            -0.46f,
-            -0.75f);
+    for (const Snowflake& flake : snowflakes)
+    {
+        XMMATRIX flakeWorld = MakeWorld(
+            0.10f,
+            0.10f,
+            0.04f,
+            GetSnowX(flake.StartX, flake.Phase),
+            GetSnowY(flake.StartY),
+            1.00f);
 
-        DrawBox(snowLeftWorld, viewProjection, snowMaterial);
-        DrawBox(snowMiddleWorld, viewProjection, snowMaterial);
-        DrawBox(snowRightWorld, viewProjection, snowMaterial);
-
-        return;
+        DrawBox(
+            flakeWorld,
+            viewProjection,
+            snowflakeMaterial);
     }
 }
 
@@ -1740,22 +1981,7 @@ void App::UpdateDoorInteractionFeedback()
 
     mNearbyDoor = newNearbyDoor;
 
-    if (mNearbyDoor == DoorId::None)
-    {
-        SetWindowTextW(
-            mMainWindow,
-            L"Doorways: Direct3D11 Demo");
-    }
-    else
-    {
-        std::wstring title = L"Doorways: Near ";
-        title += GetDoorDisplayName(mNearbyDoor);
-        title += L" door";
-
-        SetWindowTextW(
-            mMainWindow,
-            title.c_str());
-    }
+    UpdateWindowTitle();
 }
 
 void App::HandleDoorInteraction()
@@ -1774,17 +2000,50 @@ void App::HandleDoorInteraction()
 
     if (mNearbyDoor == DoorId::None)
     {
-        SetWindowTextW(
-            mMainWindow,
-            L"Doorways: No door nearby");
+        UpdateWindowTitle();
         return;
     }
 
-    mActiveDoor = mNearbyDoor;
+    EnterEnvironment(mNearbyDoor);
+}
 
-    std::wstring title = L"Doorways: Entered ";
-    title += GetDoorDisplayName(mActiveDoor);
-    title += L" environment";
+void App::EnterEnvironment(DoorId door)
+{
+    if (door == DoorId::None)
+    {
+        return;
+    }
+
+    if (mActiveDoor != door)
+    {
+        mEnvironmentTime = 0.0f;
+    }
+
+    mActiveDoor = door;
+
+    UpdateWindowTitle();
+}
+
+void App::UpdateWindowTitle()
+{
+    std::wstring title = L"Doorways: ";
+
+    if (mActiveDoor == DoorId::None)
+    {
+        title += L"Porch";
+    }
+    else
+    {
+        title += GetDoorDisplayName(mActiveDoor);
+        title += L" environment";
+    }
+
+    if (mNearbyDoor != DoorId::None)
+    {
+        title += L" | Near ";
+        title += GetDoorDisplayName(mNearbyDoor);
+        title += L" door | Press E";
+    }
 
     SetWindowTextW(
         mMainWindow,
@@ -1793,7 +2052,7 @@ void App::HandleDoorInteraction()
 
 void App::Update(float deltaTime)
 {
-    
+    mEnvironmentTime += deltaTime;
     if (GetAsyncKeyState(VK_LEFT) & 0x8000)
     {
         mCameraYaw -= mTurnSpeed * deltaTime;
@@ -1816,11 +2075,7 @@ void App::Update(float deltaTime)
 
     if(GetAsyncKeyState('R') & 0x8000)
     {
-        mCameraYaw = 0.0f;
-        mCameraPitch = -0.25f;
-
-        mPlayerPosition = XMFLOAT3(0.0f, -0.20f, -0.8f);
-        mActiveDoor = DoorId::None;
+        ResetToPorch();
 	}
 
     if (GetAsyncKeyState(VK_ESCAPE) & 0x8000)
@@ -1906,6 +2161,20 @@ void App::Update(float deltaTime)
 
     UpdateDoorInteractionFeedback();
 	HandleDoorInteraction();
+}
+
+void App::ResetToPorch()
+{
+    mCameraYaw = 0.0f;
+    mCameraPitch = -0.25f;
+
+    mPlayerPosition = XMFLOAT3(0.0f, -0.20f, -0.8f);
+
+    mNearbyDoor = DoorId::None;
+    mActiveDoor = DoorId::None;
+    mEnvironmentTime = 0.0f;
+
+    UpdateWindowTitle();
 }
 
 void App::Render()

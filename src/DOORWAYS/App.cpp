@@ -2,6 +2,7 @@
 
 #include <d3dcompiler.h>
 #include <cstddef>
+#include <cstdint>
 #include <DirectXMath.h>
 #include <string>
 
@@ -19,6 +20,8 @@ namespace
     {
 		XMFLOAT3 Position;
 		XMFLOAT3 Normal;
+
+		XMFLOAT2 TexCoord;
     };
 
     struct PerObjectConstantBuffer
@@ -27,6 +30,7 @@ namespace
         XMFLOAT4X4 World;
         XMFLOAT4X4 WorldInvTranspose;
         XMFLOAT4 MaterialDiffuse;
+        XMFLOAT4 TexTransform;
     };
 
     struct PerFrameConstantBuffer
@@ -107,6 +111,28 @@ bool App::Initialize()
         MessageBoxW(
             nullptr,
             L"Failed to build geometry.",
+            L"Initialization Error",
+            MB_OK | MB_ICONERROR);
+
+        return false;
+    }
+
+    if (!BuildTextures())
+    {
+        MessageBoxW(
+            nullptr,
+            L"Failed to build textures.",
+            L"Initialization Error",
+            MB_OK | MB_ICONERROR);
+
+        return false;
+    }
+
+    if (!BuildSamplerState())
+    {
+        MessageBoxW(
+            nullptr,
+            L"Failed to build sampler state.",
             L"Initialization Error",
             MB_OK | MB_ICONERROR);
 
@@ -466,12 +492,21 @@ bool App::BuildShaders()
             offsetof(Vertex, Normal),
             D3D11_INPUT_PER_VERTEX_DATA,
             0
+        },
+        {
+            "TEXCOORD",
+            0,
+            DXGI_FORMAT_R32G32_FLOAT,
+            0,
+            offsetof(Vertex, TexCoord),
+            D3D11_INPUT_PER_VERTEX_DATA,
+            0
         }
-    };
+	};
 
     hr = mDevice->CreateInputLayout(
         inputLayoutDesc,
-        2,
+        3,
         vertexShaderBlob->GetBufferPointer(),
         vertexShaderBlob->GetBufferSize(),
         mInputLayout.GetAddressOf());
@@ -489,40 +524,40 @@ bool App::BuildGeometry()
     Vertex vertices[] =
     {
         // Near face, z = -0.5
-        { XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT3(0.0f, 0.0f, -1.0f) },
-        { XMFLOAT3(-0.5f,  0.5f, -0.5f), XMFLOAT3(0.0f, 0.0f, -1.0f) },
-        { XMFLOAT3(0.5f,  0.5f, -0.5f), XMFLOAT3(0.0f, 0.0f, -1.0f) },
-        { XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT3(0.0f, 0.0f, -1.0f) },
+        { XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT3(0.0f, 0.0f, -1.0f), XMFLOAT2(0.0f, 1.0f) },
+        { XMFLOAT3(-0.5f,  0.5f, -0.5f), XMFLOAT3(0.0f, 0.0f, -1.0f), XMFLOAT2(0.0f, 0.0f) },
+        { XMFLOAT3(0.5f,  0.5f, -0.5f), XMFLOAT3(0.0f, 0.0f, -1.0f), XMFLOAT2(1.0f, 0.0f) },
+        { XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT3(0.0f, 0.0f, -1.0f), XMFLOAT2(1.0f, 1.0f) },
 
         // Far face, z = +0.5
-        { XMFLOAT3(-0.5f, -0.5f,  0.5f), XMFLOAT3(0.0f, 0.0f, 1.0f) },
-        { XMFLOAT3(-0.5f,  0.5f,  0.5f), XMFLOAT3(0.0f, 0.0f, 1.0f) },
-        { XMFLOAT3(0.5f,  0.5f,  0.5f), XMFLOAT3(0.0f, 0.0f, 1.0f) },
-        { XMFLOAT3(0.5f, -0.5f,  0.5f), XMFLOAT3(0.0f, 0.0f, 1.0f) },
+        { XMFLOAT3(-0.5f, -0.5f,  0.5f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT2(0.0f, 1.0f) },
+        { XMFLOAT3(-0.5f,  0.5f,  0.5f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) },
+        { XMFLOAT3(0.5f,  0.5f,  0.5f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT2(1.0f, 0.0f) },
+        { XMFLOAT3(0.5f, -0.5f,  0.5f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT2(1.0f, 1.0f) },
 
         // Left face, x = -0.5
-        { XMFLOAT3(-0.5f, -0.5f,  0.5f), XMFLOAT3(-1.0f, 0.0f, 0.0f) },
-        { XMFLOAT3(-0.5f,  0.5f,  0.5f), XMFLOAT3(-1.0f, 0.0f, 0.0f) },
-        { XMFLOAT3(-0.5f,  0.5f, -0.5f), XMFLOAT3(-1.0f, 0.0f, 0.0f) },
-        { XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT3(-1.0f, 0.0f, 0.0f) },
+        { XMFLOAT3(-0.5f, -0.5f,  0.5f), XMFLOAT3(-1.0f, 0.0f, 0.0f), XMFLOAT2(0.0f, 1.0f) },
+        { XMFLOAT3(-0.5f,  0.5f,  0.5f), XMFLOAT3(-1.0f, 0.0f, 0.0f), XMFLOAT2(0.0f, 0.0f) },
+        { XMFLOAT3(-0.5f,  0.5f, -0.5f), XMFLOAT3(-1.0f, 0.0f, 0.0f), XMFLOAT2(1.0f, 0.0f) },
+        { XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT3(-1.0f, 0.0f, 0.0f), XMFLOAT2(1.0f, 1.0f) },
 
         // Right face, x = +0.5
-        { XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT3(1.0f, 0.0f, 0.0f) },
-        { XMFLOAT3(0.5f,  0.5f, -0.5f), XMFLOAT3(1.0f, 0.0f, 0.0f) },
-        { XMFLOAT3(0.5f,  0.5f,  0.5f), XMFLOAT3(1.0f, 0.0f, 0.0f) },
-        { XMFLOAT3(0.5f, -0.5f,  0.5f), XMFLOAT3(1.0f, 0.0f, 0.0f) },
+        { XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT3(1.0f, 0.0f, 0.0f), XMFLOAT2(0.0f, 1.0f) },
+        { XMFLOAT3(0.5f,  0.5f, -0.5f), XMFLOAT3(1.0f, 0.0f, 0.0f), XMFLOAT2(0.0f, 0.0f) },
+        { XMFLOAT3(0.5f,  0.5f,  0.5f), XMFLOAT3(1.0f, 0.0f, 0.0f), XMFLOAT2(1.0f, 0.0f) },
+        { XMFLOAT3(0.5f, -0.5f,  0.5f), XMFLOAT3(1.0f, 0.0f, 0.0f), XMFLOAT2(1.0f, 1.0f) },
 
         // Top face, y = +0.5
-        { XMFLOAT3(-0.5f, 0.5f, -0.5f), XMFLOAT3(0.0f, 1.0f, 0.0f) },
-        { XMFLOAT3(-0.5f, 0.5f,  0.5f), XMFLOAT3(0.0f, 1.0f, 0.0f) },
-        { XMFLOAT3(0.5f, 0.5f,  0.5f), XMFLOAT3(0.0f, 1.0f, 0.0f) },
-        { XMFLOAT3(0.5f, 0.5f, -0.5f), XMFLOAT3(0.0f, 1.0f, 0.0f) },
+        { XMFLOAT3(-0.5f, 0.5f, -0.5f), XMFLOAT3(0.0f, 1.0f, 0.0f), XMFLOAT2(0.0f, 1.0f) },
+        { XMFLOAT3(-0.5f, 0.5f,  0.5f), XMFLOAT3(0.0f, 1.0f, 0.0f), XMFLOAT2(0.0f, 0.0f) },
+        { XMFLOAT3(0.5f, 0.5f,  0.5f), XMFLOAT3(0.0f, 1.0f, 0.0f), XMFLOAT2(1.0f, 0.0f) },
+        { XMFLOAT3(0.5f, 0.5f, -0.5f), XMFLOAT3(0.0f, 1.0f, 0.0f), XMFLOAT2(1.0f, 1.0f) },
 
         // Bottom face, y = -0.5
-        { XMFLOAT3(-0.5f, -0.5f,  0.5f), XMFLOAT3(0.0f, -1.0f, 0.0f) },
-        { XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT3(0.0f, -1.0f, 0.0f) },
-        { XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT3(0.0f, -1.0f, 0.0f) },
-        { XMFLOAT3(0.5f, -0.5f,  0.5f), XMFLOAT3(0.0f, -1.0f, 0.0f) },
+        { XMFLOAT3(-0.5f, -0.5f,  0.5f), XMFLOAT3(0.0f, -1.0f, 0.0f), XMFLOAT2(0.0f, 1.0f) },
+        { XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT3(0.0f, -1.0f, 0.0f), XMFLOAT2(0.0f, 0.0f) },
+        { XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT3(0.0f, -1.0f, 0.0f), XMFLOAT2(1.0f, 0.0f) },
+        { XMFLOAT3(0.5f, -0.5f,  0.5f), XMFLOAT3(0.0f, -1.0f, 0.0f), XMFLOAT2(1.0f, 1.0f) },
     };
 
     unsigned short indices[] =
@@ -651,6 +686,114 @@ bool App::BuildGeometry()
     return true;
 }
 
+bool App::BuildTextures()
+{
+    constexpr UINT textureWidth = 4;
+    constexpr UINT textureHeight = 4;
+    constexpr UINT bytesPerPixel = 4;
+
+    const std::uint8_t pixels[textureWidth * textureHeight * bytesPerPixel] =
+    {
+        // Row 0
+        220, 220, 220, 255,   80,  80,  80, 255,  220, 220, 220, 255,   80,  80,  80, 255,
+
+        // Row 1
+         80,  80,  80, 255,  220, 220, 220, 255,   80,  80,  80, 255,  220, 220, 220, 255,
+
+         // Row 2
+         220, 220, 220, 255,   80,  80,  80, 255,  220, 220, 220, 255,   80,  80,  80, 255,
+
+         // Row 3
+          80,  80,  80, 255,  220, 220, 220, 255,   80,  80,  80, 255,  220, 220, 220, 255
+    };
+
+    D3D11_TEXTURE2D_DESC textureDesc = {};
+
+    textureDesc.Width = textureWidth;
+    textureDesc.Height = textureHeight;
+    textureDesc.MipLevels = 1;
+    textureDesc.ArraySize = 1;
+    textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+
+    textureDesc.SampleDesc.Count = 1;
+    textureDesc.SampleDesc.Quality = 0;
+
+    textureDesc.Usage = D3D11_USAGE_IMMUTABLE;
+    textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    textureDesc.CPUAccessFlags = 0;
+    textureDesc.MiscFlags = 0;
+
+    D3D11_SUBRESOURCE_DATA textureInitData = {};
+
+    textureInitData.pSysMem = pixels;
+    textureInitData.SysMemPitch = textureWidth * bytesPerPixel;
+    textureInitData.SysMemSlicePitch = 0;
+
+    HRESULT hr = mDevice->CreateTexture2D(
+        &textureDesc,
+        &textureInitData,
+        mDiffuseTexture.GetAddressOf());
+
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+
+    srvDesc.Format = textureDesc.Format;
+    srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    srvDesc.Texture2D.MostDetailedMip = 0;
+    srvDesc.Texture2D.MipLevels = 1;
+
+    hr = mDevice->CreateShaderResourceView(
+        mDiffuseTexture.Get(),
+        &srvDesc,
+        mDiffuseTextureView.GetAddressOf());
+
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    return true;
+}
+
+bool App::BuildSamplerState()
+{
+    D3D11_SAMPLER_DESC samplerDesc = {};
+
+    samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+
+    samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+    samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+    samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+
+    samplerDesc.MipLODBias = 0.0f;
+    samplerDesc.MaxAnisotropy = 1;
+
+    samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+
+    samplerDesc.BorderColor[0] = 0.0f;
+    samplerDesc.BorderColor[1] = 0.0f;
+    samplerDesc.BorderColor[2] = 0.0f;
+    samplerDesc.BorderColor[3] = 0.0f;
+
+    samplerDesc.MinLOD = 0.0f;
+    samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+    HRESULT hr = mDevice->CreateSamplerState(
+        &samplerDesc,
+        mSamplerState.GetAddressOf());
+
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    return true;
+}
+
 void App::ClearFrame()
 {
     const float clearColor[4] =
@@ -729,6 +872,27 @@ void App::BindRenderPipeline()
         1,
         1,
         perFrameBuffers);
+
+    ID3D11SamplerState* samplers[] =
+    {
+        mSamplerState.Get()
+    };
+
+    mImmediateContext->PSSetSamplers(
+        0,
+        1,
+        samplers);
+
+    ID3D11ShaderResourceView* shaderResources[] =
+    {
+        mDiffuseTextureView.Get()
+    };
+
+    mImmediateContext->PSSetShaderResources(
+        0,
+        1,
+        shaderResources);
+
 }
 
 void App::UpdateLightingConstants()
@@ -814,6 +978,7 @@ void App::DrawBox(
         worldInverseTranspose);
 
     perObjectData.MaterialDiffuse = material.Diffuse;
+    perObjectData.TexTransform = material.TexTransform;
 
     mImmediateContext->UpdateSubresource(
         mPerObjectConstantBuffer.Get(),
@@ -833,22 +998,26 @@ void App::DrawScene(const XMMATRIX& viewProjection)
 {
     Material floorMaterial =
     {
-        XMFLOAT4(0.45f, 0.35f, 0.25f, 1.0f)
+        XMFLOAT4(0.45f, 0.35f, 0.25f, 1.0f),
+        XMFLOAT4(6.0f, 4.0f, 0.0f, 0.0f)
     };
 
     Material leftDoorMaterial =
     {
-        XMFLOAT4(0.55f, 0.15f, 0.12f, 1.0f)
+        XMFLOAT4(0.55f, 0.15f, 0.12f, 1.0f),
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f)
     };
 
     Material middleDoorMaterial =
     {
-        XMFLOAT4(0.12f, 0.32f, 0.65f, 1.0f)
+        XMFLOAT4(0.12f, 0.32f, 0.65f, 1.0f),
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f)
     };
 
     Material rightDoorMaterial =
     {
-        XMFLOAT4(0.15f, 0.50f, 0.25f, 1.0f)
+        XMFLOAT4(0.15f, 0.50f, 0.25f, 1.0f),
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f)
     };
 
     XMMATRIX floorWorld =

@@ -53,49 +53,27 @@ Im using it as an learning tool, thanks OpenAI.
 
 ## Milestones
 
-## Milestone 4 — Lighting Foundation
+## Milestone 5 — Texture Foundation
 
-Milestone 4 adds the first real lighting system to the Doorways Direct3D 11 demo.  
-Before this milestone, the porch floor and doors were rendered with flat vertex colors.  
-Now each object responds to a single directional light using surface normals, material color, ambient light, and diffuse lighting.
+### Goal
 
-### Completed Features
+Add the first texture pipeline to the Doorways Direct3D 11 project so porch objects are no longer only flat material colors.  
+This milestone introduces UV coordinates, texture resources, shader resource views, sampler states, and texture sampling in HLSL.
 
-- Added normals to the vertex format.
-- Replaced flat vertex color rendering with material-based rendering.
-- Added a per-object constant buffer for:
-  - World matrix
-  - World-view-projection matrix
-  - World inverse-transpose matrix
-  - Material diffuse color
-- Added a per-frame constant buffer for:
-  - Directional light direction
-  - Light color
-  - Ambient color
-- Updated the HLSL vertex shader to transform normals into world space.
-- Updated the HLSL pixel shader to calculate ambient + diffuse lighting.
-- Rebuilt the cube mesh using 24 vertices so each face has correct flat normals.
-- Applied different material colors to the porch floor and three doors.
-- Verified that changing light direction changes which faces are bright.
+---
 
-### Important Concepts Learned
+### What Was Added
 
-| Concept | Meaning |
-|---|---|
-| Normal | A direction vector pointing away from a surface. |
-| Directional Light | A light source with direction but no position, like sunlight. |
-| Dot Product | Measures how much a surface faces the light. |
-| Ambient Light | Base light added so shadowed areas are not completely black. |
-| Diffuse Light | Light based on the angle between the surface normal and light direction. |
-| Material | Object-specific surface color and lighting response. |
-| World Inverse-Transpose | Matrix used to correctly transform normals, especially when objects are scaled. |
-| Per-Object Constant Buffer | GPU data that changes for every drawn object. |
-| Per-Frame Constant Buffer | GPU data shared by the whole frame, such as the light. |
-
-### Lighting Formula
+- Added texture coordinates to the vertex format.
+- Updated the input layout with `TEXCOORD`.
+- Passed UV coordinates from the vertex shader to the pixel shader.
+- Created a procedural checker texture in C++.
+- Created an `ID3D11Texture2D` texture resource.
+- Created an `ID3D11ShaderResourceView` so the pixel shader can read the texture.
+- Created an `ID3D11SamplerState` to control how the texture is sampled.
+- Bound the texture SRV to pixel shader slot `t0`.
+- Bound the sampler state to pixel shader slot `s0`.
+- Sampled the texture in the pixel shader using:
 
 ```hlsl
-float diffuseAmount = saturate(dot(normalW, lightVector));
-float4 ambient = gAmbientColor * gMaterialDiffuse;
-float4 diffuse = diffuseAmount * gLightColor * gMaterialDiffuse;
-float4 finalColor = ambient + diffuse;
+gDiffuseMap.Sample(gSampler, pin.TexCoord);

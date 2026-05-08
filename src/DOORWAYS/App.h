@@ -19,6 +19,7 @@ private:
     struct Material
     {
         XMFLOAT4 Diffuse;
+        XMFLOAT4 TexTransform;
     };
 
 
@@ -30,6 +31,8 @@ private:
 
     bool BuildShaders();
 	bool BuildGeometry();
+	bool BuildTextures();
+    bool BuildSamplerState();
 
     void ClearFrame();
     void BindRenderPipeline();
@@ -65,6 +68,10 @@ private:
 
     Microsoft::WRL::ComPtr<ID3D11Buffer> mPerObjectConstantBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer> mPerFrameConstantBuffer;
+
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> mDiffuseTexture;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> mDiffuseTextureView;
+    Microsoft::WRL::ComPtr<ID3D11SamplerState> mSamplerState;
 
     UINT mIndexCount = 0;
 	                            //x=center,y=above the ground,z=behin the objects

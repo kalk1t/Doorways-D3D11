@@ -22,7 +22,13 @@ private:
         XMFLOAT4 TexTransform;
         ID3D11ShaderResourceView* DiffuseMap;
     };
-
+    enum class DoorId
+    {
+        None,
+        Sunny,
+        Rainy,
+        Snowy
+    };
 
     bool InitWindow();
     bool InitDirect3D();
@@ -36,6 +42,7 @@ private:
     bool BuildSamplerState();
 
     void ClearFrame();
+    XMFLOAT4 GetEnvironmentClearColor() const;
     void BindRenderPipeline();
 
     XMMATRIX BuildViewProjectionMatrix() const;
@@ -53,7 +60,14 @@ private:
         const XMMATRIX& viewProjection,
         const Material& material);
     void DrawPlayer(const XMMATRIX& viewProjection);
+    void DrawInteractionPrompt(const XMMATRIX& viewProjection);
+    void DrawEnvironmentObjects(const XMMATRIX& viewProjection);
 
+    DoorId GetNearbyDoor() const;
+    const wchar_t* GetDoorDisplayName(DoorId door) const;
+	float GetDoorX(DoorId door) const;
+    void UpdateDoorInteractionFeedback();
+    void HandleDoorInteraction();
 
 
 
@@ -108,6 +122,10 @@ private:
     XMFLOAT3 mPlayerPosition = XMFLOAT3(0.0f, -0.20f, -0.8f);
 
     float mPlayerYaw = 0.0f;
-    float mPlayerMoveSpeed = 0.45f;
+    float mPlayerMoveSpeed = 0.9f;
 
+    DoorId mNearbyDoor = DoorId::None;
+    DoorId mActiveDoor = DoorId::None;
+
+    bool mWasInteractKeyDown = false;
 };

@@ -18,6 +18,28 @@ namespace
 {
     const wchar_t* gWindowClassName = L"DoorwaysDemoWindowClass";
 
+    constexpr float gSunnyDoorX = -1.5f;
+    constexpr float gRainyDoorX = 0.0f;
+    constexpr float gSnowyDoorX = 1.5f;
+
+    constexpr float gDoorY = 0.4f;
+    constexpr float gDoorZ = 1.2f;
+
+    constexpr float gLabelY = 1.55f;
+    constexpr float gLabelZ = 1.05f;
+
+    constexpr float gDoorWidth = 0.8f;
+    constexpr float gDoorHeight = 1.8f;
+    constexpr float gDoorDepth = 0.15f;
+
+    constexpr float gLabelWidth = 1.0f;
+    constexpr float gLabelHeight = 0.25f;
+    constexpr float gLabelDepth = 0.05f;
+
+    constexpr float gDoorInteractionHalfWidth = 0.55f;
+    constexpr float gDoorInteractionDepth = 0.55f;
+
+
     struct Vertex
     {
 		XMFLOAT3 Position;
@@ -455,7 +477,7 @@ int App::Run()
 			float deltaTime =std::chrono::duration<float>(currentTime - previousTime).count();
 
 			previousTime = currentTime;
-            if(deltaTime>0.0f)
+            if(deltaTime>0.1f)
             {
                 deltaTime = 0.1f;
 			}
@@ -1132,14 +1154,34 @@ bool App::BuildSamplerState()
     return true;
 }
 
+XMFLOAT4 App::GetEnvironmentClearColor() const
+{
+    switch (mActiveDoor)
+    {
+    case DoorId::Sunny:
+        return XMFLOAT4(0.35f, 0.55f, 0.85f, 1.0f);
+
+    case DoorId::Rainy:
+        return XMFLOAT4(0.14f, 0.17f, 0.22f, 1.0f);
+
+    case DoorId::Snowy:
+        return XMFLOAT4(0.78f, 0.88f, 0.95f, 1.0f);
+
+    default:
+        return XMFLOAT4(0.05f, 0.08f, 0.12f, 1.0f);
+    }
+}
+
 void App::ClearFrame()
 {
+    XMFLOAT4 environmentColor = GetEnvironmentClearColor();
+
     const float clearColor[4] =
     {
-        0.05f,
-        0.08f,
-        0.12f,
-        1.0f
+        environmentColor.x,
+        environmentColor.y,
+        environmentColor.z,
+        environmentColor.w
     };
 
     mImmediateContext->ClearRenderTargetView(
@@ -1336,23 +1378,6 @@ void App::DrawBox(
 
 void App::DrawScene(const XMMATRIX& viewProjection)
 {
-    constexpr float leftDoorX = -1.5f;
-    constexpr float middleDoorX = 0.0f;
-    constexpr float rightDoorX = 1.5f;
-
-    constexpr float doorY = 0.4f;
-    constexpr float doorZ = 1.2f;
-
-    constexpr float labelY = 1.55f;
-    constexpr float labelZ = 1.05f;
-
-    constexpr float doorWidth = 0.8f;
-    constexpr float doorHeight = 1.8f;
-    constexpr float doorDepth = 0.15f;
-
-    constexpr float labelWidth = 1.0f;
-    constexpr float labelHeight = 0.25f;
-    constexpr float labelDepth = 0.05f;
 
     Material floorMaterial =
     {
@@ -1363,24 +1388,34 @@ void App::DrawScene(const XMMATRIX& viewProjection)
 
     Material leftDoorMaterial =
     {
-        XMFLOAT4(0.55f, 0.15f, 0.12f, 1.0f),
+        mActiveDoor == DoorId::Sunny
+            ? XMFLOAT4(1.0f, 0.45f, 0.30f, 1.0f)
+            : XMFLOAT4(0.55f, 0.15f, 0.12f, 1.0f),
+
         XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
         mDiffuseTextureView.Get()
     };
 
     Material middleDoorMaterial =
     {
-        XMFLOAT4(0.12f, 0.32f, 0.65f, 1.0f),
+        mActiveDoor == DoorId::Rainy
+            ? XMFLOAT4(0.35f, 0.65f, 1.0f, 1.0f)
+            : XMFLOAT4(0.12f, 0.32f, 0.65f, 1.0f),
+
         XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
         mDiffuseTextureView.Get()
     };
 
     Material rightDoorMaterial =
     {
-        XMFLOAT4(0.15f, 0.50f, 0.25f, 1.0f),
+        mActiveDoor == DoorId::Snowy
+            ? XMFLOAT4(0.55f, 1.0f, 0.65f, 1.0f)
+            : XMFLOAT4(0.15f, 0.50f, 0.25f, 1.0f),
+
         XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
         mDiffuseTextureView.Get()
     };
+
 
     Material sunnyLabelMaterial =
     {
@@ -1410,38 +1445,38 @@ void App::DrawScene(const XMMATRIX& viewProjection)
     DrawBox(floorWorld, viewProjection, floorMaterial);
 
     XMMATRIX leftDoorWorld = MakeWorld(
-        doorWidth, doorHeight, doorDepth,
-        leftDoorX, doorY, doorZ);
+        gDoorWidth, gDoorHeight, gDoorDepth,
+        gSunnyDoorX, gDoorY, gDoorZ);
 
     DrawBox(leftDoorWorld, viewProjection, leftDoorMaterial);
 
     XMMATRIX middleDoorWorld = MakeWorld(
-        doorWidth, doorHeight, doorDepth,
-        middleDoorX, doorY, doorZ);
+        gDoorWidth, gDoorHeight, gDoorDepth,
+        gRainyDoorX, gDoorY, gDoorZ);
 
     DrawBox(middleDoorWorld, viewProjection, middleDoorMaterial);
 
     XMMATRIX rightDoorWorld = MakeWorld(
-        doorWidth, doorHeight, doorDepth,
-        rightDoorX, doorY, doorZ);
+        gDoorWidth, gDoorHeight, gDoorDepth,
+        gSnowyDoorX, gDoorY, gDoorZ);
 
     DrawBox(rightDoorWorld, viewProjection, rightDoorMaterial);
 
     XMMATRIX sunnyLabelWorld = MakeWorld(
-        labelWidth, labelHeight, labelDepth,
-        leftDoorX, labelY, labelZ);
+        gLabelWidth, gLabelHeight, gLabelDepth,
+        gSunnyDoorX, gLabelY, gLabelZ);
 
     DrawDoorLabel(sunnyLabelWorld, viewProjection, sunnyLabelMaterial);
 
     XMMATRIX rainyLabelWorld = MakeWorld(
-        labelWidth, labelHeight, labelDepth,
-        middleDoorX, labelY, labelZ);
+        gLabelWidth, gLabelHeight, gLabelDepth,
+        gRainyDoorX, gLabelY, gLabelZ);
 
     DrawDoorLabel(rainyLabelWorld, viewProjection, rainyLabelMaterial);
 
     XMMATRIX snowyLabelWorld = MakeWorld(
-        labelWidth, labelHeight, labelDepth,
-        rightDoorX, labelY, labelZ);
+        gLabelWidth, gLabelHeight, gLabelDepth,
+        gSnowyDoorX, gLabelY, gLabelZ);
 
     DrawDoorLabel(snowyLabelWorld, viewProjection, snowyLabelMaterial);
 
@@ -1449,6 +1484,9 @@ void App::DrawScene(const XMMATRIX& viewProjection)
 
     DrawPlayer(viewProjection);
 
+	DrawInteractionPrompt(viewProjection);
+
+	DrawEnvironmentObjects(viewProjection);
 
 
 }
@@ -1487,6 +1525,272 @@ void App::DrawPlayer(const XMMATRIX& viewProjection)
     DrawBox(playerWorld, viewProjection, playerMaterial);
 }
 
+void App::DrawInteractionPrompt(const XMMATRIX& viewProjection)
+{
+    if (mNearbyDoor == DoorId::None)
+    {
+        return;
+    }
+
+	float promptX = GetDoorX(mNearbyDoor);
+
+    Material promptMaterial =
+    {
+        XMFLOAT4(1.0f, 0.95f, 0.15f, 1.0f),
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+        mDiffuseTextureView.Get()
+    };
+
+    XMMATRIX promptWorld = MakeWorld(
+        0.45f,
+        0.08f,
+        0.08f,
+        promptX,
+        1.95f,
+        0.95f);
+
+    DrawBox(
+        promptWorld,
+        viewProjection,
+        promptMaterial);
+}
+
+void App::DrawEnvironmentObjects(const XMMATRIX& viewProjection)
+{
+    if (mActiveDoor == DoorId::None)
+    {
+        return;
+    }
+
+    if (mActiveDoor == DoorId::Sunny)
+    {
+        Material sunMaterial =
+        {
+            XMFLOAT4(1.0f, 0.85f, 0.10f, 1.0f),
+            XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+            mDiffuseTextureView.Get()
+        };
+
+        XMMATRIX sunWorld = MakeWorld(
+            0.45f,
+            0.45f,
+            0.08f,
+            0.0f,
+            2.45f,
+            1.00f);
+
+        DrawBox(
+            sunWorld,
+            viewProjection,
+            sunMaterial);
+
+        return;
+    }
+
+    if (mActiveDoor == DoorId::Rainy)
+    {
+        Material rainMaterial =
+        {
+            XMFLOAT4(0.25f, 0.55f, 1.0f, 1.0f),
+            XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+            mDiffuseTextureView.Get()
+        };
+
+        XMMATRIX rainLeftWorld = MakeWorld(
+            0.06f,
+            0.50f,
+            0.06f,
+            -0.75f,
+            2.30f,
+            1.00f);
+
+        XMMATRIX rainMiddleWorld = MakeWorld(
+            0.06f,
+            0.50f,
+            0.06f,
+            0.0f,
+            2.30f,
+            1.00f);
+
+        XMMATRIX rainRightWorld = MakeWorld(
+            0.06f,
+            0.50f,
+            0.06f,
+            0.75f,
+            2.30f,
+            1.00f);
+
+        DrawBox(rainLeftWorld, viewProjection, rainMaterial);
+        DrawBox(rainMiddleWorld, viewProjection, rainMaterial);
+        DrawBox(rainRightWorld, viewProjection, rainMaterial);
+
+        return;
+    }
+
+    if (mActiveDoor == DoorId::Snowy)
+    {
+        Material snowMaterial =
+        {
+            XMFLOAT4(0.90f, 0.95f, 1.0f, 1.0f),
+            XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+            mDiffuseTextureView.Get()
+        };
+
+        XMMATRIX snowLeftWorld = MakeWorld(
+            0.75f,
+            0.05f,
+            0.45f,
+            -1.0f,
+            -0.46f,
+            -0.75f);
+
+        XMMATRIX snowMiddleWorld = MakeWorld(
+            0.90f,
+            0.05f,
+            0.45f,
+            0.0f,
+            -0.45f,
+            0.05f);
+
+        XMMATRIX snowRightWorld = MakeWorld(
+            0.75f,
+            0.05f,
+            0.45f,
+            1.0f,
+            -0.46f,
+            -0.75f);
+
+        DrawBox(snowLeftWorld, viewProjection, snowMaterial);
+        DrawBox(snowMiddleWorld, viewProjection, snowMaterial);
+        DrawBox(snowRightWorld, viewProjection, snowMaterial);
+
+        return;
+    }
+}
+
+App::DoorId App::GetNearbyDoor() const
+{
+    if (std::fabs(mPlayerPosition.z - gDoorZ) > gDoorInteractionDepth)
+    {
+        return DoorId::None;
+    }
+
+    if (std::fabs(mPlayerPosition.x - GetDoorX(DoorId::Sunny)) <= gDoorInteractionHalfWidth)
+    {
+        return DoorId::Sunny;
+    }
+
+    if (std::fabs(mPlayerPosition.x - GetDoorX(DoorId::Rainy)) <= gDoorInteractionHalfWidth)
+    {
+        return DoorId::Rainy;
+    }
+
+    if (std::fabs(mPlayerPosition.x - GetDoorX(DoorId::Snowy)) <= gDoorInteractionHalfWidth)
+    {
+        return DoorId::Snowy;
+    }
+
+    return DoorId::None;
+}
+
+float App::GetDoorX(DoorId door) const
+{
+    switch (door)
+    {
+    case DoorId::Sunny:
+        return gSunnyDoorX;
+
+    case DoorId::Rainy:
+        return gRainyDoorX;
+
+    case DoorId::Snowy:
+        return gSnowyDoorX;
+
+    default:
+        return 0.0f;
+    }
+}
+
+const wchar_t* App::GetDoorDisplayName(DoorId door) const
+{
+    switch (door)
+    {
+    case DoorId::Sunny:
+        return L"SUNNY";
+
+    case DoorId::Rainy:
+        return L"RAINY";
+
+    case DoorId::Snowy:
+        return L"SNOWY";
+
+    default:
+        return L"NONE";
+    }
+}
+
+void App::UpdateDoorInteractionFeedback()
+{
+    DoorId newNearbyDoor = GetNearbyDoor();
+
+    if (newNearbyDoor == mNearbyDoor)
+    {
+        return;
+    }
+
+    mNearbyDoor = newNearbyDoor;
+
+    if (mNearbyDoor == DoorId::None)
+    {
+        SetWindowTextW(
+            mMainWindow,
+            L"Doorways: Direct3D11 Demo");
+    }
+    else
+    {
+        std::wstring title = L"Doorways: Near ";
+        title += GetDoorDisplayName(mNearbyDoor);
+        title += L" door";
+
+        SetWindowTextW(
+            mMainWindow,
+            title.c_str());
+    }
+}
+
+void App::HandleDoorInteraction()
+{
+    bool isInteractKeyDown = (GetAsyncKeyState('E') & 0x8000) != 0;
+
+    bool wasPressedThisFrame =
+        isInteractKeyDown && !mWasInteractKeyDown;
+
+    mWasInteractKeyDown = isInteractKeyDown;
+
+    if (!wasPressedThisFrame)
+    {
+        return;
+    }
+
+    if (mNearbyDoor == DoorId::None)
+    {
+        SetWindowTextW(
+            mMainWindow,
+            L"Doorways: No door nearby");
+        return;
+    }
+
+    mActiveDoor = mNearbyDoor;
+
+    std::wstring title = L"Doorways: Entered ";
+    title += GetDoorDisplayName(mActiveDoor);
+    title += L" environment";
+
+    SetWindowTextW(
+        mMainWindow,
+        title.c_str());
+}
+
 void App::Update(float deltaTime)
 {
     
@@ -1516,6 +1820,7 @@ void App::Update(float deltaTime)
         mCameraPitch = -0.25f;
 
         mPlayerPosition = XMFLOAT3(0.0f, -0.20f, -0.8f);
+        mActiveDoor = DoorId::None;
 	}
 
     if (GetAsyncKeyState(VK_ESCAPE) & 0x8000)
@@ -1599,7 +1904,8 @@ void App::Update(float deltaTime)
         mPlayerPosition.z = porchMaxZ;
     }
 
-
+    UpdateDoorInteractionFeedback();
+	HandleDoorInteraction();
 }
 
 void App::Render()

@@ -53,26 +53,35 @@ Im using it as an learning tool, thanks OpenAI.
 
 ## Milestones
 
-## Milestone 7 — Player Placeholder and Movement
+## Milestone 8 — Door Interaction and Environment Selection
 
 ### Goal
 
-Add a simple controllable player placeholder to the porch scene.
+Add interactive doors to the porch scene. The player can now walk near a door, receive visual feedback, press `E`, and select an environment.
 
-The player is represented by a small box for now. This milestone focuses on player state, frame-rate independent movement, porch boundaries, and basic facing rotation. Door interaction is intentionally left for the next milestone.
+### Features Added
 
-### What was added
-
-- Added a visible player placeholder object.
-- Added player position state.
-- Added player yaw/facing direction state.
-- Added delta-time calculation using `std::chrono`.
-- Changed update logic from frame-based movement to time-based movement.
-- Added WASD player movement.
-- Changed camera rotation to use arrow keys only.
-- Added porch boundary clamping so the player cannot leave the floor.
-- Added player facing rotation using `atan2f`.
-- Kept door interaction out of this milestone.
+- Added `DoorId` enum to represent door/environment state:
+  - `None`
+  - `Sunny`
+  - `Rainy`
+  - `Snowy`
+- Added nearby-door detection based on player position.
+- Added interaction input using the `E` key.
+- Added key edge detection so holding `E` does not trigger repeated interactions.
+- Added `mNearbyDoor` for temporary proximity state.
+- Added `mActiveDoor` for selected environment state.
+- Added visual interaction prompt above the nearby door.
+- Added selected-door highlighting after interaction.
+- Added environment-specific clear colors:
+  - Sunny: brighter blue sky
+  - Rainy: storm-gray sky
+  - Snowy: pale icy sky
+- Added simple environment objects:
+  - Sunny: sun block
+  - Rainy: rain streaks
+  - Snowy: snow patches
+- Refactored repeated door constants into shared values.
 
 ### Controls
 
@@ -82,20 +91,25 @@ The player is represented by a small box for now. This milestone focuses on play
 | S | Move player backward |
 | A | Move player left |
 | D | Move player right |
-| Left Arrow | Rotate camera left |
-| Right Arrow | Rotate camera right |
-| Up Arrow | Look camera up |
-| Down Arrow | Look camera down |
-| R | Reset camera view |
-| Escape | Close the application |
+| E | Interact with nearby door |
+| R | Reset player and active environment |
+| Arrow Left / Right | Rotate camera yaw |
+| Arrow Up / Down | Rotate camera pitch |
+| Escape | Close application |
 
-### Important concepts learned
+### Important Concepts Learned
 
-#### Delta Time
+- Door proximity detection
+- Interaction zones
+- Input edge detection
+- Temporary state vs persistent state
+- Game state affecting rendering
+- Reusing cube geometry with different world matrices
+- One source of truth for shared scene constants
 
-Delta time is the amount of time that passed between the previous frame and the current frame.
+### Technical Notes
 
-Instead of moving by a fixed amount per frame, the project now moves objects by speed multiplied by delta time.
+Door interaction is split into two separate states:
 
 ```cpp
-movementVector *= mPlayerMoveSpeed * deltaTime;
+mNearbyDoor

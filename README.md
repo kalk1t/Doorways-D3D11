@@ -53,27 +53,52 @@ Im using it as an learning tool, thanks OpenAI.
 
 ## Milestones
 
-## Milestone 5 — Texture Foundation
+## Milestone 6 — Textured Door Labels
 
 ### Goal
 
-Add the first texture pipeline to the Doorways Direct3D 11 project so porch objects are no longer only flat material colors.  
-This milestone introduces UV coordinates, texture resources, shader resource views, sampler states, and texture sampling in HLSL.
+Add readable labels above each door so the porch begins to communicate where each doorway leads.
 
----
+The three labels are:
 
-### What Was Added
+- `SUNNY`
+- `RAINY`
+- `SNOWY`
 
-- Added texture coordinates to the vertex format.
-- Updated the input layout with `TEXCOORD`.
-- Passed UV coordinates from the vertex shader to the pixel shader.
-- Created a procedural checker texture in C++.
-- Created an `ID3D11Texture2D` texture resource.
-- Created an `ID3D11ShaderResourceView` so the pixel shader can read the texture.
-- Created an `ID3D11SamplerState` to control how the texture is sampled.
-- Bound the texture SRV to pixel shader slot `t0`.
-- Bound the sampler state to pixel shader slot `s0`.
-- Sampled the texture in the pixel shader using:
+### What was built
+
+- Added door label boards above each doorway.
+- Added a semantic `DrawDoorLabel()` helper.
+- Extended `Material` so each object can bind its own texture.
+- Moved texture binding to the per-object draw path.
+- Created separate texture resources for each label.
+- Generated simple pixel-text label textures on the CPU.
+- Uploaded generated label pixels into `ID3D11Texture2D`.
+- Created `ID3D11ShaderResourceView` objects for each label texture.
+- Switched texture sampling to point filtering for sharper pixel-art text.
+- Cleaned up scene transforms using named constants and a `MakeWorld()` helper.
+
+### Key Direct3D concepts practiced
+
+- `ID3D11Texture2D`
+- `ID3D11ShaderResourceView`
+- `PSSetShaderResources`
+- `SamplerState`
+- Point filtering vs. linear filtering
+- Per-object material data
+- CPU-generated texture pixels
+- Texture coordinates
+- Texture sampling in HLSL
+- Separating object meaning from mesh implementation
+
+### Important idea
+
+A texture is the image data.
+
+A sampler controls how the GPU reads that image data.
+
+In HLSL:
 
 ```hlsl
-gDiffuseMap.Sample(gSampler, pin.TexCoord);
+Texture2D gDiffuseMap : register(t0);
+SamplerState gSampler : register(s0);

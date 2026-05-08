@@ -64,6 +64,296 @@ namespace
 
         return DefWindowProcW(hwnd, msg, wParam, lParam);
     }
+
+    XMMATRIX MakeWorld(
+        float scaleX,
+        float scaleY,
+        float scaleZ,
+        float translateX,
+        float translateY,
+        float translateZ)
+    {
+        return XMMatrixScaling(scaleX, scaleY, scaleZ) *
+            XMMatrixTranslation(translateX, translateY, translateZ);
+    }
+
+    const char* const* GetGlyphRows(char c)
+    {
+        static const char* Blank[7] =
+        {
+            ".....",
+            ".....",
+            ".....",
+            ".....",
+            ".....",
+            ".....",
+            "....."
+        };
+
+        static const char* A[7] =
+        {
+            ".###.",
+            "#...#",
+            "#...#",
+            "#####",
+            "#...#",
+            "#...#",
+            "#...#"
+        };
+
+        static const char* I[7] =
+        {
+            "#####",
+            "..#..",
+            "..#..",
+            "..#..",
+            "..#..",
+            "..#..",
+            "#####"
+        };
+
+        static const char* N[7] =
+        {
+            "#...#",
+            "##..#",
+            "#.#.#",
+            "#..##",
+            "#...#",
+            "#...#",
+            "#...#"
+        };
+
+        static const char* O[7] =
+        {
+            ".###.",
+            "#...#",
+            "#...#",
+            "#...#",
+            "#...#",
+            "#...#",
+            ".###."
+        };
+
+        static const char* R[7] =
+        {
+            "####.",
+            "#...#",
+            "#...#",
+            "####.",
+            "#.#..",
+            "#..#.",
+            "#...#"
+        };
+
+        static const char* S[7] =
+        {
+            ".####",
+            "#....",
+            "#....",
+            ".###.",
+            "....#",
+            "....#",
+            "####."
+        };
+
+        static const char* U[7] =
+        {
+            "#...#",
+            "#...#",
+            "#...#",
+            "#...#",
+            "#...#",
+            "#...#",
+            ".###."
+        };
+
+        static const char* W[7] =
+        {
+            "#...#",
+            "#...#",
+            "#...#",
+            "#.#.#",
+            "#.#.#",
+            "##.##",
+            "#...#"
+        };
+
+        static const char* Y[7] =
+        {
+            "#...#",
+            "#...#",
+            ".#.#.",
+            "..#..",
+            "..#..",
+            "..#..",
+            "..#.."
+        };
+
+        switch (c)
+        {
+        case 'A': return A;
+        case 'I': return I;
+        case 'N': return N;
+        case 'O': return O;
+        case 'R': return R;
+        case 'S': return S;
+        case 'U': return U;
+        case 'W': return W;
+        case 'Y': return Y;
+        default:  return Blank;
+        }
+    }
+
+    bool CreateTextLabelTexture(
+        ID3D11Device* device,
+        const std::string& text,
+        std::uint8_t bgR,
+        std::uint8_t bgG,
+        std::uint8_t bgB,
+        std::uint8_t bgA,
+        std::uint8_t textR,
+        std::uint8_t textG,
+        std::uint8_t textB,
+        std::uint8_t textA,
+        ID3D11Texture2D** outTexture,
+        ID3D11ShaderResourceView** outTextureView)
+    {
+        constexpr UINT textureWidth = 128;
+        constexpr UINT textureHeight = 32;
+        constexpr UINT bytesPerPixel = 4;
+
+        std::uint8_t pixels[textureWidth * textureHeight * bytesPerPixel] = {};
+
+        for (UINT y = 0; y < textureHeight; ++y)
+        {
+            for (UINT x = 0; x < textureWidth; ++x)
+            {
+                UINT index = (y * textureWidth + x) * bytesPerPixel;
+
+                pixels[index + 0] = bgR;
+                pixels[index + 1] = bgG;
+                pixels[index + 2] = bgB;
+                pixels[index + 3] = bgA;
+            }
+        }
+
+        constexpr int glyphWidth = 5;
+        constexpr int glyphHeight = 7;
+        constexpr int glyphSpacing = 1;
+        constexpr int scale = 3;
+
+        int textWidth = 0;
+
+        if (!text.empty())
+        {
+            textWidth =
+                static_cast<int>(text.size()) * glyphWidth * scale +
+                static_cast<int>(text.size() - 1) * glyphSpacing * scale;
+        }
+
+        int textHeight = glyphHeight * scale;
+
+        int startX = (static_cast<int>(textureWidth) - textWidth) / 2;
+        int startY = (static_cast<int>(textureHeight) - textHeight) / 2;
+
+        int cursorX = startX;
+
+        for (char c : text)
+        {
+            const char* const* glyphRows = GetGlyphRows(c);
+
+            for (int row = 0; row < glyphHeight; ++row)
+            {
+                for (int col = 0; col < glyphWidth; ++col)
+                {
+                    if (glyphRows[row][col] != '#')
+                    {
+                        continue;
+                    }
+
+                    for (int sy = 0; sy < scale; ++sy)
+                    {
+                        for (int sx = 0; sx < scale; ++sx)
+                        {
+                            int pixelX = cursorX + col * scale + sx;
+                            int pixelY = startY + row * scale + sy;
+
+                            if (pixelX < 0 ||
+                                pixelX >= static_cast<int>(textureWidth) ||
+                                pixelY < 0 ||
+                                pixelY >= static_cast<int>(textureHeight))
+                            {
+                                continue;
+                            }
+
+                            UINT index =
+                                (static_cast<UINT>(pixelY) * textureWidth +
+                                    static_cast<UINT>(pixelX)) * bytesPerPixel;
+
+                            pixels[index + 0] = textR;
+                            pixels[index + 1] = textG;
+                            pixels[index + 2] = textB;
+                            pixels[index + 3] = textA;
+                        }
+                    }
+                }
+            }
+
+            cursorX += (glyphWidth + glyphSpacing) * scale;
+        }
+
+        D3D11_TEXTURE2D_DESC textureDesc = {};
+
+        textureDesc.Width = textureWidth;
+        textureDesc.Height = textureHeight;
+        textureDesc.MipLevels = 1;
+        textureDesc.ArraySize = 1;
+        textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+
+        textureDesc.SampleDesc.Count = 1;
+        textureDesc.SampleDesc.Quality = 0;
+
+        textureDesc.Usage = D3D11_USAGE_IMMUTABLE;
+        textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        textureDesc.CPUAccessFlags = 0;
+        textureDesc.MiscFlags = 0;
+
+        D3D11_SUBRESOURCE_DATA textureInitData = {};
+
+        textureInitData.pSysMem = pixels;
+        textureInitData.SysMemPitch = textureWidth * bytesPerPixel;
+        textureInitData.SysMemSlicePitch = 0;
+
+        HRESULT hr = device->CreateTexture2D(
+            &textureDesc,
+            &textureInitData,
+            outTexture);
+
+        if (FAILED(hr))
+        {
+            return false;
+        }
+
+        D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+
+        srvDesc.Format = textureDesc.Format;
+        srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        srvDesc.Texture2D.MostDetailedMip = 0;
+        srvDesc.Texture2D.MipLevels = 1;
+
+        hr = device->CreateShaderResourceView(
+            *outTexture,
+            &srvDesc,
+            outTextureView);
+
+        if (FAILED(hr))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
 }
 
 App::App(HINSTANCE hInstance)
@@ -756,6 +1046,40 @@ bool App::BuildTextures()
         return false;
     }
 
+    if (!CreateTextLabelTexture(
+        mDevice.Get(),
+        "SUNNY",
+        245, 190, 45, 255,
+        20, 20, 20, 255,
+        mSunnyLabelTexture.GetAddressOf(),
+        mSunnyLabelTextureView.GetAddressOf()))
+    {
+        return false;
+    }
+
+    if (!CreateTextLabelTexture(
+        mDevice.Get(),
+        "RAINY",
+        45, 110, 220, 255,
+        245, 245, 245, 255,
+        mRainyLabelTexture.GetAddressOf(),
+        mRainyLabelTextureView.GetAddressOf()))
+    {
+        return false;
+    }
+
+    if (!CreateTextLabelTexture(
+        mDevice.Get(),
+        "SNOWY",
+        230, 245, 255, 255,
+        20, 20, 20, 255,
+        mSnowyLabelTexture.GetAddressOf(),
+        mSnowyLabelTextureView.GetAddressOf()))
+    {
+        return false;
+    }
+
+
     return true;
 }
 
@@ -763,7 +1087,7 @@ bool App::BuildSamplerState()
 {
     D3D11_SAMPLER_DESC samplerDesc = {};
 
-    samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
 
     samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
     samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -883,15 +1207,7 @@ void App::BindRenderPipeline()
         1,
         samplers);
 
-    ID3D11ShaderResourceView* shaderResources[] =
-    {
-        mDiffuseTextureView.Get()
-    };
-
-    mImmediateContext->PSSetShaderResources(
-        0,
-        1,
-        shaderResources);
+   
 
 }
 
@@ -988,6 +1304,16 @@ void App::DrawBox(
         0,
         0);
 
+    ID3D11ShaderResourceView* shaderResources[] =
+    {
+        material.DiffuseMap
+    };
+
+    mImmediateContext->PSSetShaderResources(
+        0,
+        1,
+        shaderResources);
+
     mImmediateContext->DrawIndexed(
         mIndexCount,
         0,
@@ -996,53 +1322,122 @@ void App::DrawBox(
 
 void App::DrawScene(const XMMATRIX& viewProjection)
 {
+    constexpr float leftDoorX = -1.5f;
+    constexpr float middleDoorX = 0.0f;
+    constexpr float rightDoorX = 1.5f;
+
+    constexpr float doorY = 0.4f;
+    constexpr float doorZ = 1.2f;
+
+    constexpr float labelY = 1.55f;
+    constexpr float labelZ = 1.05f;
+
+    constexpr float doorWidth = 0.8f;
+    constexpr float doorHeight = 1.8f;
+    constexpr float doorDepth = 0.15f;
+
+    constexpr float labelWidth = 1.0f;
+    constexpr float labelHeight = 0.25f;
+    constexpr float labelDepth = 0.05f;
+
     Material floorMaterial =
     {
         XMFLOAT4(0.45f, 0.35f, 0.25f, 1.0f),
-        XMFLOAT4(6.0f, 4.0f, 0.0f, 0.0f)
+        XMFLOAT4(6.0f, 4.0f, 0.0f, 0.0f),
+        mDiffuseTextureView.Get()
     };
 
     Material leftDoorMaterial =
     {
         XMFLOAT4(0.55f, 0.15f, 0.12f, 1.0f),
-        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f)
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+        mDiffuseTextureView.Get()
     };
 
     Material middleDoorMaterial =
     {
         XMFLOAT4(0.12f, 0.32f, 0.65f, 1.0f),
-        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f)
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+        mDiffuseTextureView.Get()
     };
 
     Material rightDoorMaterial =
     {
         XMFLOAT4(0.15f, 0.50f, 0.25f, 1.0f),
-        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f)
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+        mDiffuseTextureView.Get()
     };
 
-    XMMATRIX floorWorld =
-        XMMatrixScaling(5.0f, 0.1f, 4.0f) *
-        XMMatrixTranslation(0.0f, -0.55f, 0.0f);
+    Material sunnyLabelMaterial =
+    {
+        XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+        mSunnyLabelTextureView.Get()
+    };
+
+    Material rainyLabelMaterial =
+    {
+        XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+        mRainyLabelTextureView.Get()
+    };
+
+    Material snowyLabelMaterial =
+    {
+        XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+        mSnowyLabelTextureView.Get()
+    };
+
+    XMMATRIX floorWorld = MakeWorld(
+        5.0f, 0.1f, 4.0f,
+        0.0f, -0.55f, 0.0f);
 
     DrawBox(floorWorld, viewProjection, floorMaterial);
 
-    XMMATRIX leftDoorWorld =
-        XMMatrixScaling(0.8f, 1.8f, 0.15f) *
-        XMMatrixTranslation(-1.5f, 0.4f, 1.2f);
+    XMMATRIX leftDoorWorld = MakeWorld(
+        doorWidth, doorHeight, doorDepth,
+        leftDoorX, doorY, doorZ);
 
     DrawBox(leftDoorWorld, viewProjection, leftDoorMaterial);
 
-    XMMATRIX middleDoorWorld =
-        XMMatrixScaling(0.8f, 1.8f, 0.15f) *
-        XMMatrixTranslation(0.0f, 0.4f, 1.2f);
+    XMMATRIX middleDoorWorld = MakeWorld(
+        doorWidth, doorHeight, doorDepth,
+        middleDoorX, doorY, doorZ);
 
     DrawBox(middleDoorWorld, viewProjection, middleDoorMaterial);
 
-    XMMATRIX rightDoorWorld =
-        XMMatrixScaling(0.8f, 1.8f, 0.15f) *
-        XMMatrixTranslation(1.5f, 0.4f, 1.2f);
+    XMMATRIX rightDoorWorld = MakeWorld(
+        doorWidth, doorHeight, doorDepth,
+        rightDoorX, doorY, doorZ);
 
     DrawBox(rightDoorWorld, viewProjection, rightDoorMaterial);
+
+    XMMATRIX sunnyLabelWorld = MakeWorld(
+        labelWidth, labelHeight, labelDepth,
+        leftDoorX, labelY, labelZ);
+
+    DrawDoorLabel(sunnyLabelWorld, viewProjection, sunnyLabelMaterial);
+
+    XMMATRIX rainyLabelWorld = MakeWorld(
+        labelWidth, labelHeight, labelDepth,
+        middleDoorX, labelY, labelZ);
+
+    DrawDoorLabel(rainyLabelWorld, viewProjection, rainyLabelMaterial);
+
+    XMMATRIX snowyLabelWorld = MakeWorld(
+        labelWidth, labelHeight, labelDepth,
+        rightDoorX, labelY, labelZ);
+
+    DrawDoorLabel(snowyLabelWorld, viewProjection, snowyLabelMaterial);
+}
+
+void App::DrawDoorLabel(
+    const XMMATRIX& world,
+    const XMMATRIX& viewProjection,
+    const Material& material)
+{
+    DrawBox(world, viewProjection, material);
 }
 
 void App::Update()

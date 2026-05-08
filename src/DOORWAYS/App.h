@@ -20,6 +20,7 @@ private:
     {
         XMFLOAT4 Diffuse;
         XMFLOAT4 TexTransform;
+        ID3D11ShaderResourceView* DiffuseMap;
     };
 
 
@@ -42,8 +43,17 @@ private:
     void UpdateLightingConstants();
 
     void DrawScene(const XMMATRIX& viewProjection);
-    void DrawBox(const XMMATRIX& world,
-        const XMMATRIX& viewProjection,const Material& material);
+    void DrawBox(
+        const XMMATRIX& world,
+        const XMMATRIX& viewProjection,
+        const Material& material);
+    void DrawDoorLabel(
+        const XMMATRIX& world,
+        const XMMATRIX& viewProjection,
+        const Material& material);
+
+
+
 
 private:
     HINSTANCE mAppInstance = nullptr;
@@ -71,6 +81,16 @@ private:
 
     Microsoft::WRL::ComPtr<ID3D11Texture2D> mDiffuseTexture;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> mDiffuseTextureView;
+
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> mSunnyLabelTexture;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> mSunnyLabelTextureView;
+
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> mRainyLabelTexture;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> mRainyLabelTextureView;
+
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> mSnowyLabelTexture;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> mSnowyLabelTextureView;
+
     Microsoft::WRL::ComPtr<ID3D11SamplerState> mSamplerState;
 
     UINT mIndexCount = 0;

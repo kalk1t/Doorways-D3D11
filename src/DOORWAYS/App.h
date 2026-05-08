@@ -16,6 +16,12 @@ public:
     int Run();
 
 private:
+    struct Material
+    {
+        XMFLOAT4 Diffuse;
+    };
+
+
     bool InitWindow();
     bool InitDirect3D();
 
@@ -30,8 +36,11 @@ private:
 
     XMMATRIX BuildViewProjectionMatrix() const;
 
+    void UpdateLightingConstants();
+
     void DrawScene(const XMMATRIX& viewProjection);
-    void DrawBox(const XMMATRIX& world, const XMMATRIX& viewProjection);
+    void DrawBox(const XMMATRIX& world,
+        const XMMATRIX& viewProjection,const Material& material);
 
 private:
     HINSTANCE mAppInstance = nullptr;
@@ -53,7 +62,9 @@ private:
     Microsoft::WRL::ComPtr<ID3D11InputLayout> mInputLayout;
     Microsoft::WRL::ComPtr<ID3D11Buffer> mVertexBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer> mIndexBuffer;
-    Microsoft::WRL::ComPtr<ID3D11Buffer> mConstantBuffer;
+
+    Microsoft::WRL::ComPtr<ID3D11Buffer> mPerObjectConstantBuffer;
+    Microsoft::WRL::ComPtr<ID3D11Buffer> mPerFrameConstantBuffer;
 
     UINT mIndexCount = 0;
 	                            //x=center,y=above the ground,z=behin the objects
@@ -64,5 +75,7 @@ private:
 
 	float mMoveSpeed = 0.05f; //how fast the camera moves in the scene
 	float mTurnSpeed = 0.02f; //how fast the camera turns when the mouse moves
+
+  
 
 };

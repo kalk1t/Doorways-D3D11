@@ -53,45 +53,49 @@ Im using it as an learning tool, thanks OpenAI.
 
 ## Milestones
 
-## Milestone 3 — Camera Control
+## Milestone 4 — Lighting Foundation
 
-Milestone 3 adds a controllable camera to the Doorways Direct3D 11 project.
-
-In the previous milestone, the scene used a hardcoded camera inside the render function.  
-In this milestone, the camera was moved into application state so it can be updated every frame.
+Milestone 4 adds the first real lighting system to the Doorways Direct3D 11 demo.  
+Before this milestone, the porch floor and doors were rendered with flat vertex colors.  
+Now each object responds to a single directional light using surface normals, material color, ambient light, and diffuse lighting.
 
 ### Completed Features
 
-- Added camera position as persistent `App` state.
-- Added camera yaw for left/right rotation.
-- Added camera pitch for up/down rotation.
-- Added an `Update()` function to separate logic from rendering.
-- Updated the main loop to call `Update()` before `Render()`.
-- Rebuilt the view matrix every frame from camera data.
-- Added arrow-key camera rotation.
-- Added pitch clamping to prevent the camera from flipping.
-- Added keyboard movement for navigating the porch scene.
-
-### Camera Controls
-
-| Key | Action |
-|---|---|
-| `W` | Move forward |
-| `S` | Move backward |
-| `A` | Move left |
-| `D` | Move right |
-| `Left Arrow` | Look left |
-| `Right Arrow` | Look right |
-| `Up Arrow` | Look up |
-| `Down Arrow` | Look down |
-| `R` | Restarts camera position |
-| `ESC` | Close the application |
+- Added normals to the vertex format.
+- Replaced flat vertex color rendering with material-based rendering.
+- Added a per-object constant buffer for:
+  - World matrix
+  - World-view-projection matrix
+  - World inverse-transpose matrix
+  - Material diffuse color
+- Added a per-frame constant buffer for:
+  - Directional light direction
+  - Light color
+  - Ambient color
+- Updated the HLSL vertex shader to transform normals into world space.
+- Updated the HLSL pixel shader to calculate ambient + diffuse lighting.
+- Rebuilt the cube mesh using 24 vertices so each face has correct flat normals.
+- Applied different material colors to the porch floor and three doors.
+- Verified that changing light direction changes which faces are bright.
 
 ### Important Concepts Learned
 
-This milestone focused on the difference between object movement and camera movement.
+| Concept | Meaning |
+|---|---|
+| Normal | A direction vector pointing away from a surface. |
+| Directional Light | A light source with direction but no position, like sunlight. |
+| Dot Product | Measures how much a surface faces the light. |
+| Ambient Light | Base light added so shadowed areas are not completely black. |
+| Diffuse Light | Light based on the angle between the surface normal and light direction. |
+| Material | Object-specific surface color and lighting response. |
+| World Inverse-Transpose | Matrix used to correctly transform normals, especially when objects are scaled. |
+| Per-Object Constant Buffer | GPU data that changes for every drawn object. |
+| Per-Frame Constant Buffer | GPU data shared by the whole frame, such as the light. |
 
+### Lighting Formula
 
-World matrix changes the object.
-View matrix changes the camera.
-Projection matrix creates perspective.
+```hlsl
+float diffuseAmount = saturate(dot(normalW, lightVector));
+float4 ambient = gAmbientColor * gMaterialDiffuse;
+float4 diffuse = diffuseAmount * gLightColor * gMaterialDiffuse;
+float4 finalColor = ambient + diffuse;

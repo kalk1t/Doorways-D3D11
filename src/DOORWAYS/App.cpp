@@ -3,6 +3,7 @@
 #include <d3dcompiler.h>
 #include <cstddef>
 #include <DirectXMath.h>
+#include <string>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -16,17 +17,30 @@ namespace
 
     struct Vertex
     {
-		float Position[3];
-		float Color[4];
+		XMFLOAT3 Position;
+		XMFLOAT3 Normal;
     };
 
-    struct ConstantBuffer
+    struct PerObjectConstantBuffer
     {
         XMFLOAT4X4 WorldViewProj;
+        XMFLOAT4X4 World;
+        XMFLOAT4X4 WorldInvTranspose;
+        XMFLOAT4 MaterialDiffuse;
     };
 
-    static_assert((sizeof(ConstantBuffer) % 16) == 0,
-        "ConstantBuffer size must be a multiple of 16 bytes.");
+    struct PerFrameConstantBuffer
+    {
+        XMFLOAT4 LightDirection;
+        XMFLOAT4 LightColor;
+        XMFLOAT4 AmbientColor;
+    };
+
+    static_assert((sizeof(PerObjectConstantBuffer) % 16) == 0,
+        "PerObjectConstantBuffer size must be a multiple of 16 bytes.");
+
+    static_assert((sizeof(PerFrameConstantBuffer) % 16) == 0,
+        "PerFrameConstantBuffer size must be a multiple of 16 bytes.");
 
     LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     {
@@ -445,11 +459,11 @@ bool App::BuildShaders()
             0
         },
         {
-            "COLOR",
+            "NORMAL",
             0,
-            DXGI_FORMAT_R32G32B32A32_FLOAT,
+            DXGI_FORMAT_R32G32B32_FLOAT,
             0,
-            offsetof(Vertex, Color),
+            offsetof(Vertex, Normal),
             D3D11_INPUT_PER_VERTEX_DATA,
             0
         }
@@ -474,47 +488,77 @@ bool App::BuildGeometry()
 {
     Vertex vertices[] =
     {
-        // Back face corners, z = -0.5
-        { { -0.5f, -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
-        { { -0.5f,  0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
-        { {  0.5f,  0.5f, -0.5f }, { 0.0f, 0.0f, 1.0f, 1.0f } },
-        { {  0.5f, -0.5f, -0.5f }, { 1.0f, 1.0f, 0.0f, 1.0f } },
+        // Near face, z = -0.5
+        { XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT3(0.0f, 0.0f, -1.0f) },
+        { XMFLOAT3(-0.5f,  0.5f, -0.5f), XMFLOAT3(0.0f, 0.0f, -1.0f) },
+        { XMFLOAT3(0.5f,  0.5f, -0.5f), XMFLOAT3(0.0f, 0.0f, -1.0f) },
+        { XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT3(0.0f, 0.0f, -1.0f) },
 
-        // Front face corners, z = +0.5
-        { { -0.5f, -0.5f,  0.5f }, { 1.0f, 0.0f, 1.0f, 1.0f } },
-        { { -0.5f,  0.5f,  0.5f }, { 0.0f, 1.0f, 1.0f, 1.0f } },
-        { {  0.5f,  0.5f,  0.5f }, { 1.0f, 1.0f, 1.0f, 1.0f } },
-        { {  0.5f, -0.5f,  0.5f }, { 0.2f, 0.2f, 0.2f, 1.0f } },
+        // Far face, z = +0.5
+        { XMFLOAT3(-0.5f, -0.5f,  0.5f), XMFLOAT3(0.0f, 0.0f, 1.0f) },
+        { XMFLOAT3(-0.5f,  0.5f,  0.5f), XMFLOAT3(0.0f, 0.0f, 1.0f) },
+        { XMFLOAT3(0.5f,  0.5f,  0.5f), XMFLOAT3(0.0f, 0.0f, 1.0f) },
+        { XMFLOAT3(0.5f, -0.5f,  0.5f), XMFLOAT3(0.0f, 0.0f, 1.0f) },
+
+        // Left face, x = -0.5
+        { XMFLOAT3(-0.5f, -0.5f,  0.5f), XMFLOAT3(-1.0f, 0.0f, 0.0f) },
+        { XMFLOAT3(-0.5f,  0.5f,  0.5f), XMFLOAT3(-1.0f, 0.0f, 0.0f) },
+        { XMFLOAT3(-0.5f,  0.5f, -0.5f), XMFLOAT3(-1.0f, 0.0f, 0.0f) },
+        { XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT3(-1.0f, 0.0f, 0.0f) },
+
+        // Right face, x = +0.5
+        { XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT3(1.0f, 0.0f, 0.0f) },
+        { XMFLOAT3(0.5f,  0.5f, -0.5f), XMFLOAT3(1.0f, 0.0f, 0.0f) },
+        { XMFLOAT3(0.5f,  0.5f,  0.5f), XMFLOAT3(1.0f, 0.0f, 0.0f) },
+        { XMFLOAT3(0.5f, -0.5f,  0.5f), XMFLOAT3(1.0f, 0.0f, 0.0f) },
+
+        // Top face, y = +0.5
+        { XMFLOAT3(-0.5f, 0.5f, -0.5f), XMFLOAT3(0.0f, 1.0f, 0.0f) },
+        { XMFLOAT3(-0.5f, 0.5f,  0.5f), XMFLOAT3(0.0f, 1.0f, 0.0f) },
+        { XMFLOAT3(0.5f, 0.5f,  0.5f), XMFLOAT3(0.0f, 1.0f, 0.0f) },
+        { XMFLOAT3(0.5f, 0.5f, -0.5f), XMFLOAT3(0.0f, 1.0f, 0.0f) },
+
+        // Bottom face, y = -0.5
+        { XMFLOAT3(-0.5f, -0.5f,  0.5f), XMFLOAT3(0.0f, -1.0f, 0.0f) },
+        { XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT3(0.0f, -1.0f, 0.0f) },
+        { XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT3(0.0f, -1.0f, 0.0f) },
+        { XMFLOAT3(0.5f, -0.5f,  0.5f), XMFLOAT3(0.0f, -1.0f, 0.0f) },
     };
 
     unsigned short indices[] =
     {
-        // Front face
+        // Near face
         0, 1, 2,
         0, 2, 3,
 
-        // Back face
+        // Far face
         4, 6, 5,
         4, 7, 6,
 
         // Left face
-        4, 5, 1,
-        4, 1, 0,
+        8, 9, 10,
+        8, 10, 11,
 
         // Right face
-        3, 2, 6,
-        3, 6, 7,
+        12, 13, 14,
+        12, 14, 15,
 
         // Top face
-        1, 5, 6,
-        1, 6, 2,
+        16, 17, 18,
+        16, 18, 19,
 
         // Bottom face
-        4, 0, 3,
-        4, 3, 7
+        20, 21, 22,
+        20, 22, 23
     };
 
     mIndexCount = static_cast<UINT>(sizeof(indices) / sizeof(indices[0]));
+    
+    /*
+    wchar_t msg[128];
+    swprintf_s(msg, L"Index count = %u", mIndexCount);
+    MessageBoxW(nullptr, msg, L"Debug", MB_OK);
+    */
 
     D3D11_BUFFER_DESC vertexBufferDesc = {};
 
@@ -528,6 +572,8 @@ bool App::BuildGeometry()
     D3D11_SUBRESOURCE_DATA vertexInitData = {};
 
     vertexInitData.pSysMem = vertices;
+    vertexInitData.SysMemPitch = 0;
+    vertexInitData.SysMemSlicePitch = 0;
 
     HRESULT hr = mDevice->CreateBuffer(
         &vertexBufferDesc,
@@ -551,6 +597,8 @@ bool App::BuildGeometry()
     D3D11_SUBRESOURCE_DATA indexInitData = {};
 
     indexInitData.pSysMem = indices;
+    indexInitData.SysMemPitch = 0;
+    indexInitData.SysMemSlicePitch = 0;
 
     hr = mDevice->CreateBuffer(
         &indexBufferDesc,
@@ -562,19 +610,38 @@ bool App::BuildGeometry()
         return false;
     }
 
-    D3D11_BUFFER_DESC constantBufferDesc = {};
+    D3D11_BUFFER_DESC perObjectBufferDesc = {};
 
-    constantBufferDesc.ByteWidth = sizeof(ConstantBuffer);
-    constantBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-    constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    constantBufferDesc.CPUAccessFlags = 0;
-    constantBufferDesc.MiscFlags = 0;
-    constantBufferDesc.StructureByteStride = 0;
+    perObjectBufferDesc.ByteWidth = sizeof(PerObjectConstantBuffer);
+    perObjectBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+    perObjectBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    perObjectBufferDesc.CPUAccessFlags = 0;
+    perObjectBufferDesc.MiscFlags = 0;
+    perObjectBufferDesc.StructureByteStride = 0;
 
     hr = mDevice->CreateBuffer(
-        &constantBufferDesc,
+        &perObjectBufferDesc,
         nullptr,
-        mConstantBuffer.GetAddressOf());
+        mPerObjectConstantBuffer.GetAddressOf());
+
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    D3D11_BUFFER_DESC perFrameBufferDesc = {};
+
+    perFrameBufferDesc.ByteWidth = sizeof(PerFrameConstantBuffer);
+    perFrameBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+    perFrameBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    perFrameBufferDesc.CPUAccessFlags = 0;
+    perFrameBufferDesc.MiscFlags = 0;
+    perFrameBufferDesc.StructureByteStride = 0;
+
+    hr = mDevice->CreateBuffer(
+        &perFrameBufferDesc,
+        nullptr,
+        mPerFrameConstantBuffer.GetAddressOf());
 
     if (FAILED(hr))
     {
@@ -637,15 +704,48 @@ void App::BindRenderPipeline()
         nullptr,
         0);
 
-    ID3D11Buffer* constantBuffers[] =
+
+    ID3D11Buffer* perObjectBuffers[] =
     {
-        mConstantBuffer.Get()
+        mPerObjectConstantBuffer.Get()
     };
 
     mImmediateContext->VSSetConstantBuffers(
         0,
         1,
-        constantBuffers);
+        perObjectBuffers);
+
+    mImmediateContext->PSSetConstantBuffers(
+        0,
+        1,
+        perObjectBuffers);
+
+    ID3D11Buffer* perFrameBuffers[] =
+    {
+        mPerFrameConstantBuffer.Get()
+    };
+
+    mImmediateContext->PSSetConstantBuffers(
+        1,
+        1,
+        perFrameBuffers);
+}
+
+void App::UpdateLightingConstants()
+{
+    PerFrameConstantBuffer perFrameData = {};
+
+    perFrameData.LightDirection = XMFLOAT4(0.577f, -0.577f, 0.577f, 0.0f);
+    perFrameData.LightColor = XMFLOAT4(0.85f, 0.85f, 0.80f, 1.0f);
+    perFrameData.AmbientColor = XMFLOAT4(0.20f, 0.20f, 0.25f, 1.0f);
+
+    mImmediateContext->UpdateSubresource(
+        mPerFrameConstantBuffer.Get(),
+        0,
+        nullptr,
+        &perFrameData,
+        0,
+        0);
 }
 
 XMMATRIX App::BuildViewProjectionMatrix() const
@@ -689,19 +789,37 @@ XMMATRIX App::BuildViewProjectionMatrix() const
     return view * projection;
 }
 
-void App::DrawBox(const XMMATRIX& world, const XMMATRIX& viewProjection)
+void App::DrawBox(
+    const XMMATRIX& world,
+    const XMMATRIX& viewProjection,
+    const Material& material)
 {
-    ConstantBuffer constantBuffer = {};
+    PerObjectConstantBuffer perObjectData = {};
+
+    XMMATRIX worldViewProjection = world * viewProjection;
+
+    XMMATRIX worldInverseTranspose =
+        XMMatrixTranspose(XMMatrixInverse(nullptr, world));
 
     XMStoreFloat4x4(
-        &constantBuffer.WorldViewProj,
-        world * viewProjection);
+        &perObjectData.WorldViewProj,
+        worldViewProjection);
+
+    XMStoreFloat4x4(
+        &perObjectData.World,
+        world);
+
+    XMStoreFloat4x4(
+        &perObjectData.WorldInvTranspose,
+        worldInverseTranspose);
+
+    perObjectData.MaterialDiffuse = material.Diffuse;
 
     mImmediateContext->UpdateSubresource(
-        mConstantBuffer.Get(),
+        mPerObjectConstantBuffer.Get(),
         0,
         nullptr,
-        &constantBuffer,
+        &perObjectData,
         0,
         0);
 
@@ -713,33 +831,49 @@ void App::DrawBox(const XMMATRIX& world, const XMMATRIX& viewProjection)
 
 void App::DrawScene(const XMMATRIX& viewProjection)
 {
-    // Floor
+    Material floorMaterial =
+    {
+        XMFLOAT4(0.45f, 0.35f, 0.25f, 1.0f)
+    };
+
+    Material leftDoorMaterial =
+    {
+        XMFLOAT4(0.55f, 0.15f, 0.12f, 1.0f)
+    };
+
+    Material middleDoorMaterial =
+    {
+        XMFLOAT4(0.12f, 0.32f, 0.65f, 1.0f)
+    };
+
+    Material rightDoorMaterial =
+    {
+        XMFLOAT4(0.15f, 0.50f, 0.25f, 1.0f)
+    };
+
     XMMATRIX floorWorld =
         XMMatrixScaling(5.0f, 0.1f, 4.0f) *
         XMMatrixTranslation(0.0f, -0.55f, 0.0f);
 
-    DrawBox(floorWorld, viewProjection);
+    DrawBox(floorWorld, viewProjection, floorMaterial);
 
-    // Left door
     XMMATRIX leftDoorWorld =
         XMMatrixScaling(0.8f, 1.8f, 0.15f) *
         XMMatrixTranslation(-1.5f, 0.4f, 1.2f);
 
-    DrawBox(leftDoorWorld, viewProjection);
+    DrawBox(leftDoorWorld, viewProjection, leftDoorMaterial);
 
-    // Middle door
     XMMATRIX middleDoorWorld =
         XMMatrixScaling(0.8f, 1.8f, 0.15f) *
         XMMatrixTranslation(0.0f, 0.4f, 1.2f);
 
-    DrawBox(middleDoorWorld, viewProjection);
+    DrawBox(middleDoorWorld, viewProjection, middleDoorMaterial);
 
-    // Right door
     XMMATRIX rightDoorWorld =
         XMMatrixScaling(0.8f, 1.8f, 0.15f) *
         XMMatrixTranslation(1.5f, 0.4f, 1.2f);
 
-    DrawBox(rightDoorWorld, viewProjection);
+    DrawBox(rightDoorWorld, viewProjection, rightDoorMaterial);
 }
 
 void App::Update()
@@ -797,6 +931,8 @@ void App::Render()
     ClearFrame();
 
     BindRenderPipeline();
+
+	UpdateLightingConstants();
 
     XMMATRIX viewProjection = BuildViewProjectionMatrix();
 

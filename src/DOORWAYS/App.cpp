@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <DirectXMath.h>
 #include <string>
+#include <chrono>
+#include <cmath>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -436,6 +438,8 @@ int App::Run()
 {
     MSG msg = {};
 
+	auto previousTime = std::chrono::high_resolution_clock::now();
+
     while (msg.message != WM_QUIT)
     {
         if (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE))
@@ -445,7 +449,17 @@ int App::Run()
         }
         else
         {
-			Update();
+
+			auto currentTime = std::chrono::high_resolution_clock::now();
+
+			float deltaTime =std::chrono::duration<float>(currentTime - previousTime).count();
+
+			previousTime = currentTime;
+            if(deltaTime>0.0f)
+            {
+                deltaTime = 0.1f;
+			}
+			Update(deltaTime);
             Render();
         }
     }
@@ -1430,6 +1444,13 @@ void App::DrawScene(const XMMATRIX& viewProjection)
         rightDoorX, labelY, labelZ);
 
     DrawDoorLabel(snowyLabelWorld, viewProjection, snowyLabelMaterial);
+
+
+
+    DrawPlayer(viewProjection);
+
+
+
 }
 
 void App::DrawDoorLabel(
@@ -1440,40 +1461,67 @@ void App::DrawDoorLabel(
     DrawBox(world, viewProjection, material);
 }
 
-void App::Update()
+void App::DrawPlayer(const XMMATRIX& viewProjection)
 {
-
-    if(GetAsyncKeyState(VK_ESCAPE) & 0x8000)
+    Material playerMaterial =
     {
-        DestroyWindow(mMainWindow);
-	}
+        XMFLOAT4(0.95f, 0.85f, 0.20f, 1.0f),
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+        mDiffuseTextureView.Get()
+    };
 
-    if (GetAsyncKeyState('A') & 0x8000 || GetAsyncKeyState(VK_LEFT) & 0x8000)
+    XMMATRIX scale = XMMatrixScaling(
+        0.30f,
+        0.60f,
+        0.45f);
+
+    XMMATRIX rotation = XMMatrixRotationY(mPlayerYaw);
+
+    XMMATRIX translation = XMMatrixTranslation(
+        mPlayerPosition.x,
+        mPlayerPosition.y,
+        mPlayerPosition.z);
+
+    XMMATRIX playerWorld = scale * rotation * translation;
+
+    DrawBox(playerWorld, viewProjection, playerMaterial);
+}
+
+void App::Update(float deltaTime)
+{
+    
+    if (GetAsyncKeyState(VK_LEFT) & 0x8000)
     {
-        mCameraYaw -= mTurnSpeed;
+        mCameraYaw -= mTurnSpeed * deltaTime;
     }
 
-    if (GetAsyncKeyState('D') & 0x8000 || GetAsyncKeyState(VK_RIGHT) & 0x8000)
+    if (GetAsyncKeyState(VK_RIGHT) & 0x8000)
     {
-        mCameraYaw += mTurnSpeed;
+        mCameraYaw += mTurnSpeed * deltaTime;
     }
 
-    if (GetAsyncKeyState('W') & 0x8000 || GetAsyncKeyState(VK_UP) & 0x8000  )
+    if (GetAsyncKeyState(VK_UP) & 0x8000)
     {
-        mCameraPitch += mTurnSpeed;
+        mCameraPitch += mTurnSpeed * deltaTime;
     }
 
-    if (GetAsyncKeyState('S') & 0x8000 || GetAsyncKeyState(VK_DOWN) & 0x8000)
+    if (GetAsyncKeyState(VK_DOWN) & 0x8000)
     {
-        mCameraPitch -= mTurnSpeed;
+        mCameraPitch -= mTurnSpeed * deltaTime;
     }
 
     if(GetAsyncKeyState('R') & 0x8000)
     {
         mCameraYaw = 0.0f;
         mCameraPitch = -0.25f;
+
+        mPlayerPosition = XMFLOAT3(0.0f, -0.20f, -0.8f);
 	}
 
+    if (GetAsyncKeyState(VK_ESCAPE) & 0x8000)
+    {
+        DestroyWindow(mMainWindow);
+    }
 
     const float pitchLimit = 0.9f;
 
@@ -1485,6 +1533,70 @@ void App::Update()
     if (mCameraPitch < -pitchLimit)
     {
         mCameraPitch = -pitchLimit;
+    }
+
+    XMFLOAT3 playerMovement = XMFLOAT3(0.0f, 0.0f, 0.0f);
+
+    if (GetAsyncKeyState('W') & 0x8000)
+    {
+        playerMovement.z += 1.0f;
+    }
+
+    if (GetAsyncKeyState('S') & 0x8000)
+    {
+        playerMovement.z -= 1.0f;
+    }
+
+    if (GetAsyncKeyState('A') & 0x8000)
+    {
+        playerMovement.x -= 1.0f;
+    }
+
+    if (GetAsyncKeyState('D') & 0x8000)
+    {
+        playerMovement.x += 1.0f;
+    }
+
+    XMVECTOR movementVector = XMLoadFloat3(&playerMovement);
+
+    if (XMVectorGetX(XMVector3LengthSq(movementVector)) > 0.0f)
+    {
+        mPlayerYaw = atan2f(playerMovement.x, playerMovement.z);
+
+        movementVector = XMVector3Normalize(movementVector);
+
+        movementVector *= mPlayerMoveSpeed * deltaTime;
+
+        XMVECTOR currentPosition = XMLoadFloat3(&mPlayerPosition);
+        currentPosition += movementVector;
+
+        XMStoreFloat3(&mPlayerPosition, currentPosition);
+    }
+
+
+    constexpr float porchMinX = -2.35f;
+    constexpr float porchMaxX = 2.35f;
+    constexpr float porchMinZ = -1.85f;
+    constexpr float porchMaxZ = 1.85f;
+
+    if (mPlayerPosition.x < porchMinX)
+    {
+        mPlayerPosition.x = porchMinX;
+    }
+
+    if (mPlayerPosition.x > porchMaxX)
+    {
+        mPlayerPosition.x = porchMaxX;
+    }
+
+    if (mPlayerPosition.z < porchMinZ)
+    {
+        mPlayerPosition.z = porchMinZ;
+    }
+
+    if (mPlayerPosition.z > porchMaxZ)
+    {
+        mPlayerPosition.z = porchMaxZ;
     }
 
 

@@ -27,7 +27,7 @@ private:
     bool InitWindow();
     bool InitDirect3D();
 
-    void Update();
+    void Update(float deltaTime);
     void Render();
 
     bool BuildShaders();
@@ -42,6 +42,7 @@ private:
 
     void UpdateLightingConstants();
 
+
     void DrawScene(const XMMATRIX& viewProjection);
     void DrawBox(
         const XMMATRIX& world,
@@ -51,6 +52,7 @@ private:
         const XMMATRIX& world,
         const XMMATRIX& viewProjection,
         const Material& material);
+    void DrawPlayer(const XMMATRIX& viewProjection);
 
 
 
@@ -101,8 +103,11 @@ private:
 	float mCameraPitch = -0.25f; //rotates around X axis, up and down.
 
 	float mMoveSpeed = 0.05f; //how fast the camera moves in the scene
-	float mTurnSpeed = 0.02f; //how fast the camera turns when the mouse moves
+	float mTurnSpeed = 1.5f; //how fast the camera turns when the mouse moves
 
-  
+    XMFLOAT3 mPlayerPosition = XMFLOAT3(0.0f, -0.20f, -0.8f);
+
+    float mPlayerYaw = 0.0f;
+    float mPlayerMoveSpeed = 0.45f;
 
 };

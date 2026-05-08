@@ -53,52 +53,49 @@ Im using it as an learning tool, thanks OpenAI.
 
 ## Milestones
 
-## Milestone 6 — Textured Door Labels
+## Milestone 7 — Player Placeholder and Movement
 
 ### Goal
 
-Add readable labels above each door so the porch begins to communicate where each doorway leads.
+Add a simple controllable player placeholder to the porch scene.
 
-The three labels are:
+The player is represented by a small box for now. This milestone focuses on player state, frame-rate independent movement, porch boundaries, and basic facing rotation. Door interaction is intentionally left for the next milestone.
 
-- `SUNNY`
-- `RAINY`
-- `SNOWY`
+### What was added
 
-### What was built
+- Added a visible player placeholder object.
+- Added player position state.
+- Added player yaw/facing direction state.
+- Added delta-time calculation using `std::chrono`.
+- Changed update logic from frame-based movement to time-based movement.
+- Added WASD player movement.
+- Changed camera rotation to use arrow keys only.
+- Added porch boundary clamping so the player cannot leave the floor.
+- Added player facing rotation using `atan2f`.
+- Kept door interaction out of this milestone.
 
-- Added door label boards above each doorway.
-- Added a semantic `DrawDoorLabel()` helper.
-- Extended `Material` so each object can bind its own texture.
-- Moved texture binding to the per-object draw path.
-- Created separate texture resources for each label.
-- Generated simple pixel-text label textures on the CPU.
-- Uploaded generated label pixels into `ID3D11Texture2D`.
-- Created `ID3D11ShaderResourceView` objects for each label texture.
-- Switched texture sampling to point filtering for sharper pixel-art text.
-- Cleaned up scene transforms using named constants and a `MakeWorld()` helper.
+### Controls
 
-### Key Direct3D concepts practiced
+| Key | Action |
+|---|---|
+| W | Move player forward |
+| S | Move player backward |
+| A | Move player left |
+| D | Move player right |
+| Left Arrow | Rotate camera left |
+| Right Arrow | Rotate camera right |
+| Up Arrow | Look camera up |
+| Down Arrow | Look camera down |
+| R | Reset camera view |
+| Escape | Close the application |
 
-- `ID3D11Texture2D`
-- `ID3D11ShaderResourceView`
-- `PSSetShaderResources`
-- `SamplerState`
-- Point filtering vs. linear filtering
-- Per-object material data
-- CPU-generated texture pixels
-- Texture coordinates
-- Texture sampling in HLSL
-- Separating object meaning from mesh implementation
+### Important concepts learned
 
-### Important idea
+#### Delta Time
 
-A texture is the image data.
+Delta time is the amount of time that passed between the previous frame and the current frame.
 
-A sampler controls how the GPU reads that image data.
+Instead of moving by a fixed amount per frame, the project now moves objects by speed multiplied by delta time.
 
-In HLSL:
-
-```hlsl
-Texture2D gDiffuseMap : register(t0);
-SamplerState gSampler : register(s0);
+```cpp
+movementVector *= mPlayerMoveSpeed * deltaTime;

@@ -53,115 +53,105 @@ Im using it as an learning tool, thanks OpenAI.
 
 ## Current Milestone
 
-## Milestone 10 — Environment Polish: Making the World Feel Alive
+## Milestone 11 — App Cleanup and Architecture Stabilization
 
-### Goal
+**Goal:**  
+Clean up the project structure after Milestone 10 so the codebase is ready for larger environment features, better scene composition, and future realism work.
 
-Milestone 10 focused on making the four current spaces feel more alive and atmospheric:
+This milestone does not focus on adding a major new visual feature. Instead, it focuses on separating responsibilities so the project can grow without turning `App` into one large file that controls everything.
 
-- Porch
-- Sunny doorway environment
-- Rainy doorway environment
-- Snowy doorway environment
+### Completed
 
-The goal was not realism yet. The goal was to take the simple box-based prototype and make each environment communicate a stronger mood through motion, lighting, color, and simple animated effects.
+- Cleaned up the main `App` class so it is mainly responsible for:
+  - window creation
+  - application initialization
+  - main loop timing
+  - per-frame update
+  - per-frame render call
+  - window title updates
 
----
+- Added a dedicated `DoorSystem` for doorway gameplay logic:
+  - nearby door detection
+  - door display names
+  - `E` key interaction handling
+  - entering Sunny, Rainy, and Snowy environments
+  - resetting back to the porch
 
-### Completed Features
+- Added a dedicated `WorldRenderer` for scene-level drawing:
+  - porch floor
+  - three doorways
+  - doorway labels
+  - player model
+  - interaction prompt
+  - environment-specific objects
+  - animated doorway glow
 
-#### Sunny Environment
+- Added a dedicated `WorldState` structure to hold active world data:
+  - main camera
+  - main player
+  - active environment
+  - nearby door
+  - environment timer
+  - previous interact-key state
 
-Added a warmer, more animated sunny scene:
+- Added a dedicated `Camera` class:
+  - camera position
+  - yaw/pitch rotation
+  - view-projection matrix creation
 
-- Animated moving clouds
-- Pulsing sun disk
-- Animated sun rays
-- Warm backdrop color
-- Stronger sunny color palette
+- Kept player data separate in `Player`:
+  - player position
+  - player yaw/facing direction
+  - movement speed
 
-This made the sunny environment feel brighter, warmer, and less static.
+- Kept environment lighting and clear-color logic inside `EnvironmentSettings`:
+  - Porch lighting
+  - Sunny lighting
+  - Rainy lighting
+  - Snowy lighting
+  - animated porch light pulse
 
----
+- Preserved Milestone 10 visual atmosphere work:
+  - Sunny environment with moving clouds and pulsing sun rays
+  - Rainy environment with storm clouds, falling rain, and puddles
+  - Snowy environment with mountains, mist, snow patches, and drifting snowflakes
+  - Doorway atmosphere glow based on nearby/active door state
 
-#### Rainy Environment
+- Maintained the Direct3D 11 render pipeline:
+  - textured boxes
+  - normals
+  - material diffuse color
+  - per-object constant buffer
+  - per-frame lighting constant buffer
+  - texture sampling in HLSL
 
-Improved the rainy scene with more atmosphere:
+### Current Controls
 
-- Dark moving storm clouds
-- More raindrops
-- Different raindrop speeds
-- Slanted rain to suggest wind
-- Small horizontal wind drift
-- Animated puddle color pulse
+| Key | Action |
+|---|---|
+| `W` / `S` | Move player forward/backward |
+| `A` / `D` | Move player left/right |
+| Arrow keys | Rotate camera |
+| `E` | Enter nearby doorway |
+| `R` | Reset back to porch |
+| `Esc` | Close application |
 
-This made the rainy environment feel colder, darker, wetter, and more active.
+### Study Notes
 
----
+This milestone is important because it introduces better code ownership.
 
-#### Snowy Environment
+Before this cleanup, too much logic lived inside `App`. That works for a small demo, but it becomes hard to maintain when the project grows.
 
-Improved the snowy scene with stronger depth and colder atmosphere:
+Now the project has clearer responsibilities:
 
-- Distant blocky mountains
-- Snow caps on mountains
-- Moving mist/fog band
-- More falling snowflakes
-- Different snowflake sizes
-- Different snowflake fall speeds
-- Sideways snow drift
-- More snow patches on the ground
+| System | Responsibility |
+|---|---|
+| `App` | Runs the application and coordinates systems |
+| `Renderer` | Owns Direct3D resources and low-level drawing |
+| `WorldRenderer` | Draws the world and environment objects |
+| `DoorSystem` | Controls door proximity and interaction logic |
+| `WorldState` | Stores current world/game state |
+| `Camera` | Builds the view-projection matrix |
+| `EnvironmentSettings` | Provides lighting and background color per environment |
 
-This made the snowy environment feel quieter, deeper, and more atmospheric.
-
----
-
-#### Doorway Atmosphere
-
-Added animated doorway glow effects:
-
-- Sunny door has warm orange glow
-- Rainy door has blue glow
-- Snowy door has pale cyan glow
-- Nearby door glow pulses stronger
-- Active environment door stays brighter
-
-This made the doors feel more like portals instead of simple colored boxes.
-
----
-
-#### Porch Lighting
-
-Added subtle breathing light to the porch:
-
-- Warm light slowly changes intensity
-- Ambient light gently pulses
-- Porch feels more alive even before entering a door
-
-This improved the main hub area and made the starting scene feel less static.
-
----
-
-### Technical Concepts Practiced
-
-This milestone practiced several important graphics programming ideas:
-
-- Time-based animation using `deltaTime`
-- Sine-wave animation with `sinf`
-- Reusing one cube mesh for many different objects
-- Creating atmosphere through color and motion
-- Simple particle-like effects using repeated geometry
-- Environment-specific lighting
-- Draw order for visual layering
-- Organizing scene behavior by environment state
-
----
-
-### Important Code Ideas
-
-The project now uses `mEnvironmentTime` to animate environment effects over time.
-
-Examples:
-
-```cpp
-float pulse = 0.5f + 0.5f * sinf(mEnvironmentTime * speed);
+This makes the project ready for the next stage: replacing simple placeholder geometry with more realistic world features.

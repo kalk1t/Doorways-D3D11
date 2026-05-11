@@ -22,6 +22,20 @@ public:
 
     void DrawDoorwayAtmosphere(const XMMATRIX& viewProjection);
 
+    void DrawPorchEnvironment(const XMMATRIX& viewProjection);
+
+    void DrawNightSky(const XMMATRIX& viewProjection);
+    void DrawMoon(const XMMATRIX& viewProjection);
+    void DrawStars(const XMMATRIX& viewProjection);
+
+    void DrawPorchFloor(const XMMATRIX& viewProjection);
+    void DrawPorchFence(const XMMATRIX& viewProjection);
+
+    void DrawMountainRing(const XMMATRIX& viewProjection);
+    void DrawWaterfall(const XMMATRIX& viewProjection);
+
+
+
     void DrawSunnyEnvironment(const XMMATRIX& viewProjection);
     void DrawRainyEnvironment(const XMMATRIX& viewProjection);
     void DrawSnowyEnvironment(const XMMATRIX& viewProjection);

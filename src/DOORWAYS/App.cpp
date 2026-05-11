@@ -133,6 +133,17 @@ bool App::Initialize()
         return false;
     }
 
+    if (!mRenderer.BuildBlendStates())
+    {
+        MessageBoxW(
+            nullptr,
+            L"Failed to build blend states.",
+            L"Initialization Error",
+            MB_OK | MB_ICONERROR);
+
+        return false;
+    }
+
     return true;
 }
 

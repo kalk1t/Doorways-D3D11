@@ -13,14 +13,20 @@ using namespace DirectX;
 
 
 XMMATRIX MakeWorld(
-    float scaleX,
-    float scaleY,
-    float scaleZ,
-    float translateX,
-    float translateY,
-    float translateZ)
+    float scaleX,float scaleY,float scaleZ,
+    float translateX,float translateY,float translateZ)
 {
     return XMMatrixScaling(scaleX, scaleY, scaleZ) *
+        XMMatrixTranslation(translateX, translateY, translateZ);
+}
+
+XMMATRIX MakeWorldSRT(
+    float scaleX,float scaleY,float scaleZ,
+    float rotX,float rotY,float rotZ,
+    float translateX,float translateY,float translateZ)
+{
+    return XMMatrixScaling(scaleX, scaleY, scaleZ) *
+        XMMatrixRotationRollPitchYaw(rotX, rotY, rotZ) *
         XMMatrixTranslation(translateX, translateY, translateZ);
 }
 
@@ -29,15 +35,1343 @@ WorldRenderer::WorldRenderer(App* app)
 {
 }
 
-void WorldRenderer::DrawScene(const XMMATRIX& viewProjection)
+
+void WorldRenderer::DrawPorchEnvironment(const XMMATRIX& viewProjection)
 {
-    
-    Material floorMaterial =
+    //DrawNightSky(viewProjection);
+    //DrawStars(viewProjection);
+    DrawMoon(viewProjection);
+
+    //DrawMountainRing(viewProjection);
+    //DrawWaterfall(viewProjection);
+
+    DrawPorchFloor(viewProjection);
+    //DrawPorchFence(viewProjection);
+}
+
+void WorldRenderer::DrawNightSky(const XMMATRIX& viewProjection)
+{
+    Material skyMaterial =
     {
-        XMFLOAT4(0.45f, 0.35f, 0.25f, 1.0f),
-        XMFLOAT4(6.0f, 4.0f, 0.0f, 0.0f),
+        // Deep blue night sky.
+        XMFLOAT4(0.935f, 0.050f, 0.130f, 1.0f),
+
+        // Keep texture stretch low so the checker is not repeated heavily.
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+
         mApp->mRenderer.mDiffuseTextureView.Get()
     };
+
+    constexpr float skyDistance = 28.0f;
+    constexpr float skyHeight = 18.0f;
+    constexpr float skyPanelSize = 56.0f;
+    constexpr float skyThickness = 0.10f;
+
+    // Front sky wall.
+    XMMATRIX frontSkyWorld = MakeWorld(
+        skyPanelSize,
+        skyHeight,
+        skyThickness,
+        0.0f,
+        6.5f,
+        skyDistance);
+
+    mApp->mRenderer.DrawBox(
+        frontSkyWorld,
+        viewProjection,
+        skyMaterial);
+
+    // Back sky wall.
+    XMMATRIX backSkyWorld = MakeWorld(
+        skyPanelSize,
+        skyHeight,
+        skyThickness,
+        0.0f,
+        6.5f,
+        -skyDistance);
+
+    mApp->mRenderer.DrawBox(
+        backSkyWorld,
+        viewProjection,
+        skyMaterial);
+
+    // Left sky wall.
+    XMMATRIX leftSkyWorld = MakeWorld(
+        skyThickness,
+        skyHeight,
+        skyPanelSize,
+        -skyDistance,
+        6.5f,
+        0.0f);
+
+    mApp->mRenderer.DrawBox(
+        leftSkyWorld,
+        viewProjection,
+        skyMaterial);
+
+    // Right sky wall.
+    XMMATRIX rightSkyWorld = MakeWorld(
+        skyThickness,
+        skyHeight,
+        skyPanelSize,
+        skyDistance,
+        6.5f,
+        0.0f);
+
+    mApp->mRenderer.DrawBox(
+        rightSkyWorld,
+        viewProjection,
+        skyMaterial);
+
+    // Top sky ceiling.
+    XMMATRIX topSkyWorld = MakeWorld(
+        skyPanelSize,
+        skyThickness,
+        skyPanelSize,
+        0.0f,
+        15.5f,
+        0.0f);
+
+    mApp->mRenderer.DrawBox(
+        topSkyWorld,
+        viewProjection,
+        skyMaterial);
+}
+
+void WorldRenderer::DrawMoon(const XMMATRIX& viewProjection)
+{
+
+
+    Material moonMaterial =
+    {
+        XMFLOAT4(
+            1.35f,
+            1.35f,
+            1.35f,
+            1.00f),
+
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+
+        mApp->mRenderer.mMoonTextureView.Get(),
+
+        0.81f
+    };
+
+    Material moonGlowMaterial =
+    {
+        XMFLOAT4(
+            1.50f,
+            1.65f,
+            2.20f,
+            1.0f),
+
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+
+        mApp->mRenderer.mMoonGlowTextureView.Get(),
+
+        1.0f
+    };
+
+	constexpr float moonScaleX = 2.05f;
+    constexpr float moonScaleY = 2.05f;
+    constexpr float moonScaleZ = 2.08f;
+
+	constexpr float moonRotX = 0.0f;
+	constexpr float moonRotY = -XM_PIDIV2;
+    constexpr float moonRotZ = 0.0f;
+
+    constexpr float moonX = 7.5f;
+    constexpr float moonY = 3.0f;
+    constexpr float moonZ = 26.80f;
+
+    
+
+    // Main moon body.
+    XMMATRIX moonWorld = MakeWorldSRT(
+        moonScaleX,moonScaleY,moonScaleZ,
+        moonRotX,moonRotY,moonRotZ,
+        moonX,moonY,moonZ);
+
+    mApp->mRenderer.DrawSphere(
+        moonWorld,
+        viewProjection,
+        moonMaterial);
+
+    XMMATRIX moonGlowWorld = MakeWorldSRT(
+        3.20f,3.20f,0.03f,
+        0.0f,0.0f,0.0f,
+        moonX,moonY,moonZ + 0.75f);
+
+    mApp->mRenderer.SetAlphaBlendingEnabled(true);
+
+    mApp->mRenderer.DrawBox(
+        moonGlowWorld,
+        viewProjection,
+        moonGlowMaterial);
+
+    mApp->mRenderer.SetAlphaBlendingEnabled(false);
+}
+
+void WorldRenderer::DrawStars(const XMMATRIX& viewProjection)
+{
+    float twinkle =
+        0.5f + 0.5f * sinf(mApp->mWorld.EnvironmentTime * 1.35f);
+
+    Material smallStarMaterial =
+    {
+        XMFLOAT4(
+            1.70f + twinkle * 0.20f,
+            1.80f + twinkle * 0.20f,
+            2.20f + twinkle * 0.25f,
+            1.0f),
+
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+
+        mApp->mRenderer.mDiffuseTextureView.Get()
+    };
+
+    Material brightStarMaterial =
+    {
+        XMFLOAT4(
+            2.70f + twinkle * 0.35f,
+            2.85f + twinkle * 0.35f,
+            3.30f + twinkle * 0.45f,
+            1.0f),
+
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+
+        mApp->mRenderer.mDiffuseTextureView.Get()
+    };
+
+    constexpr float frontZ = 27.45f;
+    constexpr float backZ = -27.45f;
+    constexpr float leftX = -27.45f;
+    constexpr float rightX = 27.45f;
+    constexpr float topY = 15.25f;
+
+    auto DrawFrontStar =
+        [this, &viewProjection, &smallStarMaterial, &brightStarMaterial](
+            float x,
+            float y,
+            float size,
+            bool bright)
+        {
+            XMMATRIX starWorld = MakeWorld(
+                size,
+                size,
+                0.06f,
+                x,
+                y,
+                27.35f);
+
+            mApp->mRenderer.DrawBox(
+                starWorld,
+                viewProjection,
+                bright ? brightStarMaterial : smallStarMaterial);
+        };
+
+    auto DrawBackStar =
+        [this, &viewProjection, &smallStarMaterial, &brightStarMaterial](
+            float x,
+            float y,
+            float size,
+            bool bright)
+        {
+            XMMATRIX starWorld = MakeWorld(
+                size,
+                size,
+                0.06f,
+                x,
+                y,
+                -27.35f);
+
+            mApp->mRenderer.DrawBox(
+                starWorld,
+                viewProjection,
+                bright ? brightStarMaterial : smallStarMaterial);
+        };
+
+    auto DrawLeftStar =
+        [this, &viewProjection, &smallStarMaterial, &brightStarMaterial](
+            float z,
+            float y,
+            float size,
+            bool bright)
+        {
+            XMMATRIX starWorld = MakeWorld(
+                0.06f,
+                size,
+                size,
+                -27.35f,
+                y,
+                z);
+
+            mApp->mRenderer.DrawBox(
+                starWorld,
+                viewProjection,
+                bright ? brightStarMaterial : smallStarMaterial);
+        };
+
+    auto DrawRightStar =
+        [this, &viewProjection, &smallStarMaterial, &brightStarMaterial](
+            float z,
+            float y,
+            float size,
+            bool bright)
+        {
+            XMMATRIX starWorld = MakeWorld(
+                0.06f,
+                size,
+                size,
+                27.35f,
+                y,
+                z);
+
+            mApp->mRenderer.DrawBox(
+                starWorld,
+                viewProjection,
+                bright ? brightStarMaterial : smallStarMaterial);
+        };
+
+    auto DrawTopStar =
+        [this, &viewProjection, &smallStarMaterial, &brightStarMaterial](
+            float x,
+            float z,
+            float size,
+            bool bright)
+        {
+            XMMATRIX starWorld = MakeWorld(
+                size,
+                0.06f,
+                size,
+                x,
+                15.20f,
+                z);
+
+            mApp->mRenderer.DrawBox(
+                starWorld,
+                viewProjection,
+                bright ? brightStarMaterial : smallStarMaterial);
+        };
+
+    // Front sky stars.
+    DrawFrontStar(-10.5f, 10.8f, 0.09f, false);
+    DrawFrontStar(-7.2f, 13.2f, 0.13f, true);
+    DrawFrontStar(-4.0f, 9.4f, 0.08f, false);
+    DrawFrontStar(-1.5f, 12.5f, 0.10f, false);
+    DrawFrontStar(2.0f, 10.2f, 0.12f, true);
+    DrawFrontStar(5.5f, 13.8f, 0.08f, false);
+    DrawFrontStar(10.0f, 9.8f, 0.11f, false);
+
+    // Back sky stars.
+    DrawBackStar(-11.0f, 11.6f, 0.10f, false);
+    DrawBackStar(-8.0f, 9.6f, 0.08f, false);
+    DrawBackStar(-3.5f, 13.5f, 0.12f, true);
+    DrawBackStar(0.8f, 10.7f, 0.09f, false);
+    DrawBackStar(4.2f, 12.8f, 0.08f, false);
+    DrawBackStar(8.5f, 9.9f, 0.13f, true);
+    DrawBackStar(11.5f, 13.4f, 0.09f, false);
+
+    // Left sky stars.
+    DrawLeftStar(-12.0f, 10.2f, 0.09f, false);
+    DrawLeftStar(-8.5f, 13.1f, 0.11f, true);
+    DrawLeftStar(-4.0f, 11.4f, 0.08f, false);
+    DrawLeftStar(1.5f, 13.7f, 0.10f, false);
+    DrawLeftStar(6.0f, 10.6f, 0.12f, true);
+    DrawLeftStar(11.0f, 12.4f, 0.08f, false);
+
+    // Right sky stars.
+    DrawRightStar(-11.5f, 12.2f, 0.10f, false);
+    DrawRightStar(-6.0f, 10.4f, 0.08f, false);
+    DrawRightStar(-2.0f, 13.4f, 0.12f, true);
+    DrawRightStar(3.5f, 11.2f, 0.09f, false);
+    DrawRightStar(7.5f, 13.8f, 0.10f, false);
+    DrawRightStar(12.0f, 10.0f, 0.13f, true);
+
+    // Overhead stars.
+    DrawTopStar(-12.0f, -12.0f, 0.10f, false);
+    DrawTopStar(-8.0f, -3.0f, 0.13f, true);
+    DrawTopStar(-4.5f, 8.0f, 0.08f, false);
+    DrawTopStar(0.5f, -9.5f, 0.09f, false);
+    DrawTopStar(4.5f, 2.5f, 0.12f, true);
+    DrawTopStar(9.0f, -5.0f, 0.08f, false);
+    DrawTopStar(12.5f, 9.5f, 0.11f, false);
+}
+
+void WorldRenderer::DrawPorchFloor(const XMMATRIX& viewProjection)
+{
+    Material gapMaterial =
+    {
+        XMFLOAT4(0.075f, 0.045f, 0.025f, 1.0f),
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+        mApp->mRenderer.mDiffuseTextureView.Get()
+    };
+
+    Material beamMaterial =
+    {
+        XMFLOAT4(0.24f, 0.13f, 0.055f, 1.0f),
+        XMFLOAT4(2.0f, 1.0f, 0.0f, 0.0f),
+        mApp->mRenderer.mDiffuseTextureView.Get()
+    };
+
+    // Dark base under the planks.
+    // This makes the spaces between planks appear as dark gaps.
+    XMMATRIX baseWorld = MakeWorld(
+        5.15f,
+        0.06f,
+        4.15f,
+        0.0f,
+        -0.565f,
+        0.0f);
+
+    mApp->mRenderer.DrawBox(
+        baseWorld,
+        viewProjection,
+        gapMaterial);
+
+    // Individual wooden floor planks.
+    constexpr int plankCount = 10;
+    constexpr float plankWidth = 0.42f;
+    constexpr float plankGap = 0.06f;
+    constexpr float plankLength = 4.00f;
+    constexpr float plankHeight = 0.08f;
+
+    const float totalStep = plankWidth + plankGap;
+    const float firstPlankX =
+        -static_cast<float>(plankCount - 1) * totalStep * 0.5f;
+
+    for (int i = 0; i < plankCount; ++i)
+    {
+        float x = firstPlankX + static_cast<float>(i) * totalStep;
+
+        XMFLOAT4 plankColor;
+
+        if ((i % 3) == 0)
+        {
+            plankColor = XMFLOAT4(0.46f, 0.29f, 0.13f, 1.0f);
+        }
+        else if ((i % 3) == 1)
+        {
+            plankColor = XMFLOAT4(0.55f, 0.34f, 0.16f, 1.0f);
+        }
+        else
+        {
+            plankColor = XMFLOAT4(0.38f, 0.23f, 0.10f, 1.0f);
+        }
+
+        Material plankMaterial =
+        {
+            plankColor,
+
+            // Stretch texture along the plank length.
+            XMFLOAT4(1.0f, 5.0f, 0.0f, 0.0f),
+
+            mApp->mRenderer.mDiffuseTextureView.Get()
+        };
+
+        XMMATRIX plankWorld = MakeWorld(
+            plankWidth,
+            plankHeight,
+            plankLength,
+            x,
+            -0.54f,
+            0.0f);
+
+        mApp->mRenderer.DrawBox(
+            plankWorld,
+            viewProjection,
+            plankMaterial);
+    }
+
+    // Front porch beam.
+    XMMATRIX frontBeamWorld = MakeWorld(
+        5.25f,
+        0.16f,
+        0.18f,
+        0.0f,
+        -0.58f,
+        -2.10f);
+
+    mApp->mRenderer.DrawBox(
+        frontBeamWorld,
+        viewProjection,
+        beamMaterial);
+
+    // Back porch beam.
+    XMMATRIX backBeamWorld = MakeWorld(
+        5.25f,
+        0.16f,
+        0.18f,
+        0.0f,
+        -0.58f,
+        2.10f);
+
+    mApp->mRenderer.DrawBox(
+        backBeamWorld,
+        viewProjection,
+        beamMaterial);
+
+    // Left porch beam.
+    XMMATRIX leftBeamWorld = MakeWorld(
+        0.18f,
+        0.16f,
+        4.15f,
+        -2.62f,
+        -0.58f,
+        0.0f);
+
+    mApp->mRenderer.DrawBox(
+        leftBeamWorld,
+        viewProjection,
+        beamMaterial);
+
+    // Right porch beam.
+    XMMATRIX rightBeamWorld = MakeWorld(
+        0.18f,
+        0.16f,
+        4.15f,
+        2.62f,
+        -0.58f,
+        0.0f);
+
+    mApp->mRenderer.DrawBox(
+        rightBeamWorld,
+        viewProjection,
+        beamMaterial);
+
+    Material supportMaterial =
+    {
+        XMFLOAT4(0.18f, 0.085f, 0.035f, 1.0f),
+        XMFLOAT4(2.0f, 1.0f, 0.0f, 0.0f),
+        mApp->mRenderer.mDiffuseTextureView.Get()
+    };
+
+    // Under-floor joists.
+    // These run left-to-right under the planks.
+    const float joistZPositions[] =
+    {
+        -1.45f,
+        0.0f,
+        1.45f
+    };
+
+    for (float z : joistZPositions)
+    {
+        XMMATRIX joistWorld = MakeWorld(
+            5.05f,
+            0.12f,
+            0.14f,
+            0.0f,
+            -0.72f,
+            z);
+
+        mApp->mRenderer.DrawBox(
+            joistWorld,
+            viewProjection,
+            supportMaterial);
+    }
+
+    // Vertical support posts below the porch.
+    struct PorchSupportPost
+    {
+        float X;
+        float Z;
+        float Height;
+    };
+
+    const PorchSupportPost posts[] =
+    {
+        // Corners
+        { -2.25f, -1.75f, 0.95f },
+        {  2.25f, -1.75f, 0.95f },
+        { -2.25f,  1.75f, 0.95f },
+        {  2.25f,  1.75f, 0.95f },
+
+        // Side support posts
+        { -2.25f,  0.00f, 0.85f },
+        {  2.25f,  0.00f, 0.85f },
+
+        // Front/back middle support posts
+        {  0.00f, -1.75f, 0.85f },
+        {  0.00f,  1.75f, 0.85f }
+    };
+
+    for (const PorchSupportPost& post : posts)
+    {
+        float postCenterY = -0.72f - post.Height * 0.5f;
+
+        XMMATRIX postWorld = MakeWorld(
+            0.18f,
+            post.Height,
+            0.18f,
+            post.X,
+            postCenterY,
+            post.Z);
+
+        mApp->mRenderer.DrawBox(
+            postWorld,
+            viewProjection,
+            supportMaterial);
+    }
+
+    // Small foot blocks at the bottom of posts.
+    Material stoneFootMaterial =
+    {
+        XMFLOAT4(0.18f, 0.18f, 0.20f, 1.0f),
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+        mApp->mRenderer.mDiffuseTextureView.Get()
+    };
+
+    for (const PorchSupportPost& post : posts)
+    {
+        XMMATRIX footWorld = MakeWorld(
+            0.34f,
+            0.12f,
+            0.34f,
+            post.X,
+            -0.72f - post.Height - 0.06f,
+            post.Z);
+
+        mApp->mRenderer.DrawBox(
+            footWorld,
+            viewProjection,
+            stoneFootMaterial);
+    }
+
+}
+
+void WorldRenderer::DrawPorchFence(const XMMATRIX& viewProjection)
+{
+    Material postMaterial =
+    {
+        XMFLOAT4(0.42f, 0.22f, 0.085f, 1.0f),
+        XMFLOAT4(1.5f, 1.5f, 0.0f, 0.0f),
+        mApp->mRenderer.mDiffuseTextureView.Get()
+    };
+
+    Material railMaterial =
+    {
+        XMFLOAT4(0.52f, 0.31f, 0.13f, 1.0f),
+        XMFLOAT4(2.0f, 1.0f, 0.0f, 0.0f),
+        mApp->mRenderer.mDiffuseTextureView.Get()
+    };
+
+    Material balusterMaterial =
+    {
+        XMFLOAT4(0.36f, 0.19f, 0.075f, 1.0f),
+        XMFLOAT4(1.0f, 2.0f, 0.0f, 0.0f),
+        mApp->mRenderer.mDiffuseTextureView.Get()
+    };
+
+    constexpr float porchHalfX = 2.62f;
+    constexpr float porchHalfZ = 2.10f;
+
+    constexpr float postWidth = 0.18f;
+    constexpr float postHeight = 1.15f;
+    constexpr float postY = 0.08f;
+
+    constexpr float topRailY = 0.55f;
+    constexpr float middleRailY = 0.12f;
+
+    constexpr float railThickness = 0.12f;
+    constexpr float railHeight = 0.12f;
+
+    constexpr float balusterWidth = 0.075f;
+    constexpr float balusterHeight = 0.62f;
+    constexpr float balusterY = 0.12f;
+
+    auto DrawPost =
+        [this, &viewProjection, &postMaterial](
+            float x,
+            float z)
+        {
+            XMMATRIX postWorld = MakeWorld(
+                0.18f,
+                1.15f,
+                0.18f,
+                x,
+                0.08f,
+                z);
+
+            mApp->mRenderer.DrawBox(
+                postWorld,
+                viewProjection,
+                postMaterial);
+        };
+
+    auto DrawCap =
+        [this, &viewProjection, &railMaterial](
+            float x,
+            float z)
+        {
+            XMMATRIX capWorld = MakeWorld(
+                0.28f,
+                0.12f,
+                0.28f,
+                x,
+                0.72f,
+                z);
+
+            mApp->mRenderer.DrawBox(
+                capWorld,
+                viewProjection,
+                railMaterial);
+        };
+
+    auto DrawHorizontalRailX =
+        [this, &viewProjection, &railMaterial](
+            float z,
+            float y)
+        {
+            XMMATRIX railWorld = MakeWorld(
+                5.05f,
+                0.12f,
+                0.12f,
+                0.0f,
+                y,
+                z);
+
+            mApp->mRenderer.DrawBox(
+                railWorld,
+                viewProjection,
+                railMaterial);
+        };
+
+    auto DrawHorizontalRailZ =
+        [this, &viewProjection, &railMaterial](
+            float x,
+            float y)
+        {
+            XMMATRIX railWorld = MakeWorld(
+                0.12f,
+                0.12f,
+                4.00f,
+                x,
+                y,
+                0.0f);
+
+            mApp->mRenderer.DrawBox(
+                railWorld,
+                viewProjection,
+                railMaterial);
+        };
+
+    auto DrawBaluster =
+        [this, &viewProjection, &balusterMaterial](
+            float x,
+            float z)
+        {
+            XMMATRIX balusterWorld = MakeWorld(
+                0.075f,
+                0.62f,
+                0.075f,
+                x,
+                0.12f,
+                z);
+
+            mApp->mRenderer.DrawBox(
+                balusterWorld,
+                viewProjection,
+                balusterMaterial);
+        };
+
+    // Corner posts.
+    DrawPost(-porchHalfX, -porchHalfZ);
+    DrawPost(porchHalfX, -porchHalfZ);
+    DrawPost(-porchHalfX, porchHalfZ);
+    DrawPost(porchHalfX, porchHalfZ);
+
+    // Extra side posts.
+    DrawPost(0.0f, -porchHalfZ);
+    DrawPost(0.0f, porchHalfZ);
+    DrawPost(-porchHalfX, 0.0f);
+    DrawPost(porchHalfX, 0.0f);
+
+    // Post caps.
+    DrawCap(-porchHalfX, -porchHalfZ);
+    DrawCap(porchHalfX, -porchHalfZ);
+    DrawCap(-porchHalfX, porchHalfZ);
+    DrawCap(porchHalfX, porchHalfZ);
+    DrawCap(0.0f, -porchHalfZ);
+    DrawCap(0.0f, porchHalfZ);
+    DrawCap(-porchHalfX, 0.0f);
+    DrawCap(porchHalfX, 0.0f);
+
+    // Front and back horizontal rails.
+    DrawHorizontalRailX(-porchHalfZ, topRailY);
+    DrawHorizontalRailX(-porchHalfZ, middleRailY);
+
+    DrawHorizontalRailX(porchHalfZ, topRailY);
+    DrawHorizontalRailX(porchHalfZ, middleRailY);
+
+    // Left and right horizontal rails.
+    DrawHorizontalRailZ(-porchHalfX, topRailY);
+    DrawHorizontalRailZ(-porchHalfX, middleRailY);
+
+    DrawHorizontalRailZ(porchHalfX, topRailY);
+    DrawHorizontalRailZ(porchHalfX, middleRailY);
+
+    // Front and back balusters.
+    const float balusterXPositions[] =
+    {
+        -2.05f,
+        -1.55f,
+        -1.05f,
+        -0.55f,
+         0.55f,
+         1.05f,
+         1.55f,
+         2.05f
+    };
+
+    for (float x : balusterXPositions)
+    {
+        DrawBaluster(x, -porchHalfZ);
+        DrawBaluster(x, porchHalfZ);
+    }
+
+    // Left and right balusters.
+    const float balusterZPositions[] =
+    {
+        -1.55f,
+        -1.05f,
+        -0.55f,
+         0.55f,
+         1.05f,
+         1.55f
+    };
+
+    for (float z : balusterZPositions)
+    {
+        DrawBaluster(-porchHalfX, z);
+        DrawBaluster(porchHalfX, z);
+    }
+}
+
+void WorldRenderer::DrawMountainRing(const XMMATRIX& viewProjection)
+{
+    Material farMountainMaterial =
+    {
+        XMFLOAT4(0.075f, 0.090f, 0.145f, 1.0f),
+        XMFLOAT4(2.0f, 2.0f, 0.0f, 0.0f),
+        mApp->mRenderer.mDiffuseTextureView.Get()
+    };
+
+    Material midMountainMaterial =
+    {
+        XMFLOAT4(0.105f, 0.120f, 0.175f, 1.0f),
+        XMFLOAT4(2.0f, 2.0f, 0.0f, 0.0f),
+        mApp->mRenderer.mDiffuseTextureView.Get()
+    };
+
+    Material nearMountainMaterial =
+    {
+        XMFLOAT4(0.045f, 0.055f, 0.090f, 1.0f),
+        XMFLOAT4(2.0f, 2.0f, 0.0f, 0.0f),
+        mApp->mRenderer.mDiffuseTextureView.Get()
+    };
+
+    Material snowCapMaterial =
+    {
+        XMFLOAT4(0.48f, 0.56f, 0.72f, 1.0f),
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+        mApp->mRenderer.mDiffuseTextureView.Get()
+    };
+
+    auto DrawFrontMountain =
+        [this, &viewProjection](
+            float x,
+            float z,
+            float width,
+            float height,
+            const Material& mountainMaterial,
+            const Material& snowMaterial)
+        {
+            constexpr float baseY = -0.65f;
+            float centerY = baseY + height * 0.5f;
+
+            XMMATRIX mountainWorld = MakeWorld(
+                width,
+                height,
+                0.40f,
+                x,
+                centerY,
+                z);
+
+            mApp->mRenderer.DrawBox(
+                mountainWorld,
+                viewProjection,
+                mountainMaterial);
+
+            XMMATRIX snowCapWorld = MakeWorld(
+                width * 0.42f,
+                height * 0.16f,
+                0.42f,
+                x,
+                baseY + height * 0.88f,
+                z - 0.04f);
+
+            mApp->mRenderer.DrawBox(
+                snowCapWorld,
+                viewProjection,
+                snowMaterial);
+        };
+
+    auto DrawBackMountain =
+        [this, &viewProjection](
+            float x,
+            float z,
+            float width,
+            float height,
+            const Material& mountainMaterial,
+            const Material& snowMaterial)
+        {
+            constexpr float baseY = -0.65f;
+            float centerY = baseY + height * 0.5f;
+
+            XMMATRIX mountainWorld = MakeWorld(
+                width,
+                height,
+                0.40f,
+                x,
+                centerY,
+                z);
+
+            mApp->mRenderer.DrawBox(
+                mountainWorld,
+                viewProjection,
+                mountainMaterial);
+
+            XMMATRIX snowCapWorld = MakeWorld(
+                width * 0.42f,
+                height * 0.16f,
+                0.42f,
+                x,
+                baseY + height * 0.88f,
+                z + 0.04f);
+
+            mApp->mRenderer.DrawBox(
+                snowCapWorld,
+                viewProjection,
+                snowMaterial);
+        };
+
+    auto DrawLeftMountain =
+        [this, &viewProjection](
+            float x,
+            float z,
+            float depth,
+            float height,
+            const Material& mountainMaterial,
+            const Material& snowMaterial)
+        {
+            constexpr float baseY = -0.65f;
+            float centerY = baseY + height * 0.5f;
+
+            XMMATRIX mountainWorld = MakeWorld(
+                0.40f,
+                height,
+                depth,
+                x,
+                centerY,
+                z);
+
+            mApp->mRenderer.DrawBox(
+                mountainWorld,
+                viewProjection,
+                mountainMaterial);
+
+            XMMATRIX snowCapWorld = MakeWorld(
+                0.42f,
+                height * 0.16f,
+                depth * 0.42f,
+                x + 0.04f,
+                baseY + height * 0.88f,
+                z);
+
+            mApp->mRenderer.DrawBox(
+                snowCapWorld,
+                viewProjection,
+                snowMaterial);
+        };
+
+    auto DrawRightMountain =
+        [this, &viewProjection](
+            float x,
+            float z,
+            float depth,
+            float height,
+            const Material& mountainMaterial,
+            const Material& snowMaterial)
+        {
+            constexpr float baseY = -0.65f;
+            float centerY = baseY + height * 0.5f;
+
+            XMMATRIX mountainWorld = MakeWorld(
+                0.40f,
+                height,
+                depth,
+                x,
+                centerY,
+                z);
+
+            mApp->mRenderer.DrawBox(
+                mountainWorld,
+                viewProjection,
+                mountainMaterial);
+
+            XMMATRIX snowCapWorld = MakeWorld(
+                0.42f,
+                height * 0.16f,
+                depth * 0.42f,
+                x - 0.04f,
+                baseY + height * 0.88f,
+                z);
+
+            mApp->mRenderer.DrawBox(
+                snowCapWorld,
+                viewProjection,
+                snowMaterial);
+        };
+
+    // ============================================================
+    // Far mountain layer
+    // ============================================================
+
+    DrawFrontMountain(-14.0f, 23.0f, 8.0f, 5.8f, farMountainMaterial, snowCapMaterial);
+    DrawFrontMountain(-6.5f, 23.0f, 7.0f, 6.7f, farMountainMaterial, snowCapMaterial);
+    DrawFrontMountain(1.0f, 23.0f, 8.5f, 7.5f, farMountainMaterial, snowCapMaterial);
+    DrawFrontMountain(10.0f, 23.0f, 7.5f, 6.2f, farMountainMaterial, snowCapMaterial);
+    DrawFrontMountain(17.5f, 23.0f, 6.0f, 5.4f, farMountainMaterial, snowCapMaterial);
+
+    DrawBackMountain(-15.0f, -23.0f, 7.0f, 5.6f, farMountainMaterial, snowCapMaterial);
+    DrawBackMountain(-7.5f, -23.0f, 8.0f, 6.9f, farMountainMaterial, snowCapMaterial);
+    DrawBackMountain(1.5f, -23.0f, 7.5f, 7.2f, farMountainMaterial, snowCapMaterial);
+    DrawBackMountain(10.0f, -23.0f, 8.0f, 6.4f, farMountainMaterial, snowCapMaterial);
+    DrawBackMountain(17.0f, -23.0f, 6.0f, 5.5f, farMountainMaterial, snowCapMaterial);
+
+    DrawLeftMountain(-23.0f, -14.0f, 8.0f, 5.8f, farMountainMaterial, snowCapMaterial);
+    DrawLeftMountain(-23.0f, -6.0f, 7.0f, 6.6f, farMountainMaterial, snowCapMaterial);
+    DrawLeftMountain(-23.0f, 2.5f, 8.5f, 7.3f, farMountainMaterial, snowCapMaterial);
+    DrawLeftMountain(-23.0f, 11.5f, 7.5f, 6.1f, farMountainMaterial, snowCapMaterial);
+
+    DrawRightMountain(23.0f, -14.0f, 8.0f, 6.1f, farMountainMaterial, snowCapMaterial);
+    DrawRightMountain(23.0f, -5.5f, 7.5f, 7.0f, farMountainMaterial, snowCapMaterial);
+    DrawRightMountain(23.0f, 3.0f, 8.5f, 7.4f, farMountainMaterial, snowCapMaterial);
+    DrawRightMountain(23.0f, 12.0f, 7.0f, 5.9f, farMountainMaterial, snowCapMaterial);
+
+    // ============================================================
+    // Middle mountain layer
+    // Slightly closer and stronger.
+    // ============================================================
+
+    DrawFrontMountain(-10.0f, 18.0f, 6.0f, 6.9f, midMountainMaterial, snowCapMaterial);
+    DrawFrontMountain(-2.8f, 18.0f, 6.8f, 8.1f, midMountainMaterial, snowCapMaterial);
+    DrawFrontMountain(5.0f, 18.0f, 7.0f, 7.6f, midMountainMaterial, snowCapMaterial);
+    DrawFrontMountain(12.5f, 18.0f, 5.8f, 6.6f, midMountainMaterial, snowCapMaterial);
+
+    DrawBackMountain(-11.0f, -18.0f, 6.0f, 6.5f, midMountainMaterial, snowCapMaterial);
+    DrawBackMountain(-3.5f, -18.0f, 7.0f, 7.8f, midMountainMaterial, snowCapMaterial);
+    DrawBackMountain(4.5f, -18.0f, 6.7f, 7.2f, midMountainMaterial, snowCapMaterial);
+    DrawBackMountain(12.0f, -18.0f, 5.8f, 6.3f, midMountainMaterial, snowCapMaterial);
+
+    DrawLeftMountain(-18.0f, -10.0f, 6.2f, 6.8f, midMountainMaterial, snowCapMaterial);
+    DrawLeftMountain(-18.0f, -2.5f, 7.0f, 7.9f, midMountainMaterial, snowCapMaterial);
+    DrawLeftMountain(-18.0f, 5.5f, 6.5f, 7.1f, midMountainMaterial, snowCapMaterial);
+    DrawLeftMountain(-18.0f, 12.0f, 5.5f, 6.1f, midMountainMaterial, snowCapMaterial);
+
+    DrawRightMountain(18.0f, -10.5f, 6.0f, 6.6f, midMountainMaterial, snowCapMaterial);
+    DrawRightMountain(18.0f, -3.0f, 7.0f, 8.0f, midMountainMaterial, snowCapMaterial);
+    DrawRightMountain(18.0f, 5.0f, 6.5f, 7.2f, midMountainMaterial, snowCapMaterial);
+    DrawRightMountain(18.0f, 12.0f, 5.8f, 6.2f, midMountainMaterial, snowCapMaterial);
+
+    // ============================================================
+    // Near dark cliff pieces
+    // These make the ring feel deeper and less flat.
+    // ============================================================
+
+    DrawFrontMountain(-15.5f, 14.0f, 4.0f, 4.4f, nearMountainMaterial, snowCapMaterial);
+    DrawFrontMountain(15.5f, 14.0f, 4.0f, 4.2f, nearMountainMaterial, snowCapMaterial);
+
+    DrawBackMountain(-15.0f, -14.0f, 4.0f, 4.2f, nearMountainMaterial, snowCapMaterial);
+    DrawBackMountain(15.0f, -14.0f, 4.0f, 4.3f, nearMountainMaterial, snowCapMaterial);
+
+    DrawLeftMountain(-14.0f, -15.0f, 4.0f, 4.3f, nearMountainMaterial, snowCapMaterial);
+    DrawLeftMountain(-14.0f, 15.0f, 4.0f, 4.1f, nearMountainMaterial, snowCapMaterial);
+
+    DrawRightMountain(14.0f, -15.0f, 4.0f, 4.2f, nearMountainMaterial, snowCapMaterial);
+    DrawRightMountain(14.0f, 15.0f, 4.0f, 4.3f, nearMountainMaterial, snowCapMaterial);
+}
+
+void WorldRenderer::DrawWaterfall(const XMMATRIX& viewProjection)
+{
+    float waterPulse =
+        0.5f + 0.5f * sinf(mApp->mWorld.EnvironmentTime * 2.2f);
+
+    float mistDrift =
+        sinf(mApp->mWorld.EnvironmentTime * 0.7f) * 0.18f;
+
+    Material cliffMaterial =
+    {
+        XMFLOAT4(0.030f, 0.035f, 0.060f, 1.0f),
+        XMFLOAT4(2.0f, 2.0f, 0.0f, 0.0f),
+        mApp->mRenderer.mDiffuseTextureView.Get()
+    };
+
+    Material darkRockMaterial =
+    {
+        XMFLOAT4(0.045f, 0.050f, 0.075f, 1.0f),
+        XMFLOAT4(2.0f, 2.0f, 0.0f, 0.0f),
+        mApp->mRenderer.mDiffuseTextureView.Get()
+    };
+
+    Material waterMaterial =
+    {
+        XMFLOAT4(
+            0.25f + waterPulse * 0.06f,
+            0.48f + waterPulse * 0.10f,
+            0.85f + waterPulse * 0.15f,
+            1.0f),
+
+        XMFLOAT4(1.0f, 3.0f, 0.0f, 0.0f),
+
+        mApp->mRenderer.mDiffuseTextureView.Get()
+    };
+
+    Material waterHighlightMaterial =
+    {
+        XMFLOAT4(
+            0.70f + waterPulse * 0.15f,
+            0.88f + waterPulse * 0.12f,
+            1.45f + waterPulse * 0.25f,
+            1.0f),
+
+        XMFLOAT4(1.0f, 2.0f, 0.0f, 0.0f),
+
+        mApp->mRenderer.mDiffuseTextureView.Get()
+    };
+
+    Material mistMaterial =
+    {
+        XMFLOAT4(
+            0.35f,
+            0.48f + waterPulse * 0.05f,
+            0.68f + waterPulse * 0.08f,
+            1.0f),
+
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+
+        mApp->mRenderer.mDiffuseTextureView.Get()
+    };
+
+    Material poolMaterial =
+    {
+        XMFLOAT4(
+            0.08f,
+            0.18f + waterPulse * 0.05f,
+            0.32f + waterPulse * 0.08f,
+            1.0f),
+
+        XMFLOAT4(2.0f, 1.0f, 0.0f, 0.0f),
+
+        mApp->mRenderer.mDiffuseTextureView.Get()
+    };
+
+    // Position waterfall in the front mountain direction.
+    constexpr float waterfallZ = 13.45f;
+
+    // Dark cliff wall behind the waterfall.
+    XMMATRIX cliffBackWorld = MakeWorld(
+        4.20f,
+        6.40f,
+        0.34f,
+        0.0f,
+        2.35f,
+        waterfallZ + 0.10f);
+
+    mApp->mRenderer.DrawBox(
+        cliffBackWorld,
+        viewProjection,
+        cliffMaterial);
+
+    // Left cliff side.
+    XMMATRIX leftCliffWorld = MakeWorld(
+        1.05f,
+        6.70f,
+        0.42f,
+        -2.20f,
+        2.35f,
+        waterfallZ);
+
+    mApp->mRenderer.DrawBox(
+        leftCliffWorld,
+        viewProjection,
+        darkRockMaterial);
+
+    // Right cliff side.
+    XMMATRIX rightCliffWorld = MakeWorld(
+        1.05f,
+        6.70f,
+        0.42f,
+        2.20f,
+        2.35f,
+        waterfallZ);
+
+    mApp->mRenderer.DrawBox(
+        rightCliffWorld,
+        viewProjection,
+        darkRockMaterial);
+
+    // Top cliff cap.
+    XMMATRIX topCliffWorld = MakeWorld(
+        4.50f,
+        0.70f,
+        0.45f,
+        0.0f,
+        5.75f,
+        waterfallZ);
+
+    mApp->mRenderer.DrawBox(
+        topCliffWorld,
+        viewProjection,
+        darkRockMaterial);
+
+    // Main waterfall body.
+    XMMATRIX waterfallWorld = MakeWorld(
+        1.05f,
+        5.30f,
+        0.16f,
+        0.0f,
+        2.35f,
+        waterfallZ - 0.25f);
+
+    mApp->mRenderer.DrawBox(
+        waterfallWorld,
+        viewProjection,
+        waterMaterial);
+
+    // Animated falling highlight strips.
+    auto GetFallingY =
+        [this](float startY, float speed) -> float
+        {
+            constexpr float minY = 0.05f;
+            constexpr float maxY = 4.90f;
+            constexpr float range = maxY - minY;
+
+            float y = startY - mApp->mWorld.EnvironmentTime * speed;
+
+            while (y < minY)
+            {
+                y += range;
+            }
+
+            while (y > maxY)
+            {
+                y -= range;
+            }
+
+            return y;
+        };
+
+    struct WaterStreak
+    {
+        float X;
+        float StartY;
+        float Speed;
+        float Height;
+        float Width;
+    };
+
+    const WaterStreak streaks[] =
+    {
+        { -0.34f, 4.40f, 1.35f, 1.20f, 0.10f },
+        { -0.10f, 3.50f, 1.75f, 1.50f, 0.08f },
+        {  0.18f, 4.80f, 1.55f, 1.10f, 0.09f },
+        {  0.38f, 3.90f, 1.25f, 1.35f, 0.07f }
+    };
+
+    for (const WaterStreak& streak : streaks)
+    {
+        float y = GetFallingY(streak.StartY, streak.Speed);
+
+        XMMATRIX streakWorld = MakeWorld(
+            streak.Width,
+            streak.Height,
+            0.18f,
+            streak.X,
+            y,
+            waterfallZ - 0.34f);
+
+        mApp->mRenderer.DrawBox(
+            streakWorld,
+            viewProjection,
+            waterHighlightMaterial);
+    }
+
+    // Mist clouds at the bottom of the waterfall.
+    XMMATRIX mistMainWorld = MakeWorld(
+        2.00f,
+        0.35f,
+        0.20f,
+        mistDrift,
+        -0.05f,
+        waterfallZ - 0.45f);
+
+    mApp->mRenderer.DrawBox(
+        mistMainWorld,
+        viewProjection,
+        mistMaterial);
+
+    XMMATRIX mistLeftWorld = MakeWorld(
+        1.10f,
+        0.25f,
+        0.18f,
+        -0.65f + mistDrift * 0.5f,
+        0.08f,
+        waterfallZ - 0.50f);
+
+    mApp->mRenderer.DrawBox(
+        mistLeftWorld,
+        viewProjection,
+        mistMaterial);
+
+    XMMATRIX mistRightWorld = MakeWorld(
+        1.10f,
+        0.25f,
+        0.18f,
+        0.65f + mistDrift * 0.5f,
+        0.02f,
+        waterfallZ - 0.50f);
+
+    mApp->mRenderer.DrawBox(
+        mistRightWorld,
+        viewProjection,
+        mistMaterial);
+
+    // Small pool/river reflection below the waterfall.
+    XMMATRIX poolWorld = MakeWorld(
+        2.70f,
+        0.08f,
+        1.05f,
+        0.0f,
+        -0.50f,
+        waterfallZ - 1.10f);
+
+    mApp->mRenderer.DrawBox(
+        poolWorld,
+        viewProjection,
+        poolMaterial);
+}
+
+
+
+
+
+void WorldRenderer::DrawScene(const XMMATRIX& viewProjection)
+{
+
+    DrawPorchEnvironment(viewProjection);
+
 
     Material leftDoorMaterial =
     {
@@ -91,11 +1425,6 @@ void WorldRenderer::DrawScene(const XMMATRIX& viewProjection)
         mApp->mRenderer.mSnowyLabelTextureView.Get()
     };
 
-    XMMATRIX floorWorld = MakeWorld(
-        5.0f, 0.1f, 4.0f,
-        0.0f, -0.55f, 0.0f);
-
-    mApp->mRenderer.DrawBox(floorWorld, viewProjection, floorMaterial);
 
     DrawDoorwayAtmosphere(viewProjection);
 

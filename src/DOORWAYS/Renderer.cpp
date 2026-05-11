@@ -8,12 +8,16 @@
 #include <string>
 #include <chrono>
 #include <cmath>
+#include <vector>
+
+#include "WICTextureLoader.h"
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3dcompiler.lib")
 
 using namespace DirectX;
+using namespace std;
 
 
 const char* const* GetGlyphRows(char c)
@@ -491,7 +495,7 @@ bool Renderer::BuildShaders()
     Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
 
     HRESULT hr = D3DCompileFromFile(
-        L"Shaders\\Color.hlsl",
+        L"..\\..\\assets\\shaders\\Color.hlsl",
         nullptr,
         D3D_COMPILE_STANDARD_FILE_INCLUDE,
         "VS",
@@ -526,7 +530,7 @@ bool Renderer::BuildShaders()
     errorBlob.Reset();
 
     hr = D3DCompileFromFile(
-        L"Shaders\\Color.hlsl",
+        L"..\\..\\assets\\shaders\\Color.hlsl",
         nullptr,
         D3D_COMPILE_STANDARD_FILE_INCLUDE,
         "PS",
@@ -606,6 +610,60 @@ bool Renderer::BuildShaders()
 
 bool Renderer::BuildGeometry()
 {
+    if (!BuildBoxGeometry())
+        return false;
+    if (!BuildSphereGeometry())
+        return false;
+
+
+
+    D3D11_BUFFER_DESC perObjectBufferDesc = {};
+
+    perObjectBufferDesc.ByteWidth = sizeof(PerObjectConstantBuffer);
+    perObjectBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+    perObjectBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    perObjectBufferDesc.CPUAccessFlags = 0;
+    perObjectBufferDesc.MiscFlags = 0;
+    perObjectBufferDesc.StructureByteStride = 0;
+
+    HRESULT hr = mDevice->CreateBuffer(
+        &perObjectBufferDesc,
+        nullptr,
+        mPerObjectConstantBuffer.GetAddressOf());
+
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    D3D11_BUFFER_DESC perFrameBufferDesc = {};
+
+    perFrameBufferDesc.ByteWidth = sizeof(PerFrameConstantBuffer);
+    perFrameBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+    perFrameBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    perFrameBufferDesc.CPUAccessFlags = 0;
+    perFrameBufferDesc.MiscFlags = 0;
+    perFrameBufferDesc.StructureByteStride = 0;
+
+    hr = mDevice->CreateBuffer(
+        &perFrameBufferDesc,
+        nullptr,
+        mPerFrameConstantBuffer.GetAddressOf());
+
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    return true;
+
+
+
+    return true;
+}
+
+bool Renderer::BuildBoxGeometry()
+{
     Vertex vertices[] =
     {
         // Near face, z = -0.5
@@ -672,7 +730,7 @@ bool Renderer::BuildGeometry()
         20, 22, 23
     };
 
-    mIndexCount = static_cast<UINT>(sizeof(indices) / sizeof(indices[0]));
+    mBoxIndexCount = static_cast<UINT>(sizeof(indices) / sizeof(indices[0]));
 
     /*
     wchar_t msg[128];
@@ -698,7 +756,7 @@ bool Renderer::BuildGeometry()
     HRESULT hr = mDevice->CreateBuffer(
         &vertexBufferDesc,
         &vertexInitData,
-        mVertexBuffer.GetAddressOf());
+        mBoxVertexBuffer.GetAddressOf());
 
     if (FAILED(hr))
     {
@@ -723,45 +781,7 @@ bool Renderer::BuildGeometry()
     hr = mDevice->CreateBuffer(
         &indexBufferDesc,
         &indexInitData,
-        mIndexBuffer.GetAddressOf());
-
-    if (FAILED(hr))
-    {
-        return false;
-    }
-
-    D3D11_BUFFER_DESC perObjectBufferDesc = {};
-
-    perObjectBufferDesc.ByteWidth = sizeof(PerObjectConstantBuffer);
-    perObjectBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-    perObjectBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    perObjectBufferDesc.CPUAccessFlags = 0;
-    perObjectBufferDesc.MiscFlags = 0;
-    perObjectBufferDesc.StructureByteStride = 0;
-
-    hr = mDevice->CreateBuffer(
-        &perObjectBufferDesc,
-        nullptr,
-        mPerObjectConstantBuffer.GetAddressOf());
-
-    if (FAILED(hr))
-    {
-        return false;
-    }
-
-    D3D11_BUFFER_DESC perFrameBufferDesc = {};
-
-    perFrameBufferDesc.ByteWidth = sizeof(PerFrameConstantBuffer);
-    perFrameBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-    perFrameBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    perFrameBufferDesc.CPUAccessFlags = 0;
-    perFrameBufferDesc.MiscFlags = 0;
-    perFrameBufferDesc.StructureByteStride = 0;
-
-    hr = mDevice->CreateBuffer(
-        &perFrameBufferDesc,
-        nullptr,
-        mPerFrameConstantBuffer.GetAddressOf());
+        mBoxIndexBuffer.GetAddressOf());
 
     if (FAILED(hr))
     {
@@ -770,6 +790,246 @@ bool Renderer::BuildGeometry()
 
     return true;
 }
+
+bool Renderer::BuildSphereGeometry() {
+    constexpr int sliceCount = 48;
+    constexpr int stackCount = 24;
+    constexpr float radius = 0.5f;
+
+	vector <Vertex> vertices;
+	vector <unsigned short> indices;
+
+	vertices.reserve((sliceCount + 1) * (stackCount + 1));
+	indices.reserve(sliceCount * stackCount * 6);
+
+    for (int stack = 0; stack <= stackCount; ++stack)
+    {
+        float phi =
+            XM_PI * static_cast<float>(stack) /
+            static_cast<float>(stackCount);
+
+        for (int slice = 0; slice <= sliceCount; ++slice)
+        {
+            float theta =
+                XM_2PI * static_cast<float>(slice) /
+                static_cast<float>(sliceCount);
+
+            float x = radius * sinf(phi) * cosf(theta);
+            float y = radius * cosf(phi);
+            float z = radius * sinf(phi) * sinf(theta);
+
+            XMFLOAT3 position(x, y, z);
+
+            XMVECTOR normalVector = XMVector3Normalize(XMLoadFloat3(&position));
+
+            XMFLOAT3 normal;
+            XMStoreFloat3(&normal, normalVector);
+
+            float u =
+                static_cast<float>(slice) /
+                static_cast<float>(sliceCount);
+
+            float v =
+                static_cast<float>(stack) /
+                static_cast<float>(stackCount);
+
+            Vertex vertex =
+            {
+                position,
+                normal,
+                XMFLOAT2(u, v)
+            };
+
+            vertices.push_back(vertex);
+        }
+    }
+
+    for (int stack = 0; stack < stackCount; ++stack)
+    {
+        for (int slice = 0; slice < sliceCount; ++slice)
+        {
+            unsigned short a =
+                static_cast<unsigned short>(
+                    stack * (sliceCount + 1) + slice);
+
+            unsigned short b =
+                static_cast<unsigned short>(
+                    stack * (sliceCount + 1) + slice + 1);
+
+            unsigned short c =
+                static_cast<unsigned short>(
+                    (stack + 1) * (sliceCount + 1) + slice);
+
+            unsigned short d =
+                static_cast<unsigned short>(
+                    (stack + 1) * (sliceCount + 1) + slice + 1);
+
+            indices.push_back(a);
+            indices.push_back(b);
+            indices.push_back(c);
+
+            indices.push_back(c);
+            indices.push_back(b);
+            indices.push_back(d);
+        }
+    }
+
+	mSphereIndexCount = static_cast<UINT>(indices.size());
+
+    D3D11_BUFFER_DESC vertexBufferDesc = {};
+
+    vertexBufferDesc.ByteWidth = 
+        static_cast<UINT>(vertices.size() * sizeof(Vertex));
+    vertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+    vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    vertexBufferDesc.CPUAccessFlags = 0;
+    vertexBufferDesc.MiscFlags = 0;
+    vertexBufferDesc.StructureByteStride = 0;
+
+    D3D11_SUBRESOURCE_DATA vertexInitData = {};
+
+    vertexInitData.pSysMem = vertices.data();
+    vertexInitData.SysMemPitch = 0;
+    vertexInitData.SysMemSlicePitch = 0;
+
+    HRESULT hr = mDevice->CreateBuffer(
+        &vertexBufferDesc,
+        &vertexInitData,
+        mSphereVertexBuffer.GetAddressOf());
+
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    D3D11_BUFFER_DESC indexBufferDesc = {};
+
+    indexBufferDesc.ByteWidth =
+        static_cast<UINT>(indices.size() * sizeof(unsigned short));
+    indexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+    indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+    indexBufferDesc.CPUAccessFlags = 0;
+    indexBufferDesc.MiscFlags = 0;
+    indexBufferDesc.StructureByteStride = 0;
+
+    D3D11_SUBRESOURCE_DATA indexInitData = {};
+
+    indexInitData.pSysMem = indices.data();
+    indexInitData.SysMemPitch = 0;
+    indexInitData.SysMemSlicePitch = 0;
+
+    hr = mDevice->CreateBuffer(
+        &indexBufferDesc,
+        &indexInitData,
+        mSphereIndexBuffer.GetAddressOf());
+
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    return true;
+}
+
+
+bool CreateMoonGlowTexture(
+    ID3D11Device* device,
+    ID3D11Texture2D** outTexture,
+    ID3D11ShaderResourceView** outTextureView)
+{
+    constexpr UINT textureWidth = 256;
+    constexpr UINT textureHeight = 256;
+    constexpr UINT bytesPerPixel = 4;
+
+    std::uint8_t pixels[textureWidth * textureHeight * bytesPerPixel] = {};
+
+    for (UINT y = 0; y < textureHeight; ++y)
+    {
+        for (UINT x = 0; x < textureWidth; ++x)
+        {
+            float u =
+                (static_cast<float>(x) + 0.5f) /
+                static_cast<float>(textureWidth);
+
+            float v =
+                (static_cast<float>(y) + 0.5f) /
+                static_cast<float>(textureHeight);
+
+            float dx = u * 2.0f - 1.0f;
+            float dy = v * 2.0f - 1.0f;
+
+            float distance = sqrtf(dx * dx + dy * dy);
+
+            float alpha = 1.0f - distance;
+
+            if (alpha < 0.0f)
+            {
+                alpha = 0.0f;
+            }
+
+            alpha = alpha * alpha;
+
+            UINT index = (y * textureWidth + x) * bytesPerPixel;
+
+            pixels[index + 0] = 180;
+            pixels[index + 1] = 205;
+            pixels[index + 2] = 255;
+            pixels[index + 3] = static_cast<std::uint8_t>(alpha * 180.0f);
+        }
+    }
+
+    D3D11_TEXTURE2D_DESC textureDesc = {};
+
+    textureDesc.Width = textureWidth;
+    textureDesc.Height = textureHeight;
+    textureDesc.MipLevels = 1;
+    textureDesc.ArraySize = 1;
+    textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+
+    textureDesc.SampleDesc.Count = 1;
+    textureDesc.SampleDesc.Quality = 0;
+
+    textureDesc.Usage = D3D11_USAGE_IMMUTABLE;
+    textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    textureDesc.CPUAccessFlags = 0;
+    textureDesc.MiscFlags = 0;
+
+    D3D11_SUBRESOURCE_DATA textureInitData = {};
+
+    textureInitData.pSysMem = pixels;
+    textureInitData.SysMemPitch = textureWidth * bytesPerPixel;
+    textureInitData.SysMemSlicePitch = 0;
+
+    HRESULT hr = device->CreateTexture2D(
+        &textureDesc,
+        &textureInitData,
+        outTexture);
+
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+
+    srvDesc.Format = textureDesc.Format;
+    srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    srvDesc.Texture2D.MostDetailedMip = 0;
+    srvDesc.Texture2D.MipLevels = 1;
+
+    hr = device->CreateShaderResourceView(
+        *outTexture,
+        &srvDesc,
+        outTextureView);
+
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    return true;
+}
+
 
 bool Renderer::BuildTextures()
 {
@@ -837,6 +1097,37 @@ bool Renderer::BuildTextures()
         mDiffuseTextureView.GetAddressOf());
 
     if (FAILED(hr))
+    {
+        return false;
+    }
+
+
+    //moontexture
+	Microsoft::WRL::ComPtr<ID3D11Resource> moonTextureResource;
+
+    //loads the JPH file from disk and create a GPU texture
+    //moonTextureResource receives the generic Direct3D resource
+	//mMoonTextureView receives the shader resource view
+    //that is important because the pixel shader read textures through shader resource view
+	hr = CreateWICTextureFromFile(mDevice.Get(),
+        L"..\\..\\assets\\textures\\moon\\moon_color_2k.jpg",
+        moonTextureResource.GetAddressOf(), mMoonTextureView.GetAddressOf());
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+	//converts the generic resource into ID3D11Texture2D
+    hr = moonTextureResource.As(&mMoonTexture);
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    if (!CreateMoonGlowTexture(
+        mDevice.Get(),
+        mMoonGlowTexture.GetAddressOf(),
+        mMoonGlowTextureView.GetAddressOf()))
     {
         return false;
     }
@@ -923,12 +1214,12 @@ void Renderer::BindRenderPipeline()
     mImmediateContext->IASetVertexBuffers(
         0,
         1,
-        mVertexBuffer.GetAddressOf(),
+        mBoxVertexBuffer.GetAddressOf(),
         &stride,
         &offset);
 
     mImmediateContext->IASetIndexBuffer(
-        mIndexBuffer.Get(),
+        mBoxIndexBuffer.Get(),
         DXGI_FORMAT_R16_UINT,
         0);
 
@@ -985,11 +1276,107 @@ void Renderer::BindRenderPipeline()
 
 }
 
+bool Renderer::BuildBlendStates()
+{
+    D3D11_BLEND_DESC alphaBlendDesc = {};
+
+    alphaBlendDesc.AlphaToCoverageEnable = false;
+    alphaBlendDesc.IndependentBlendEnable = false;
+
+    alphaBlendDesc.RenderTarget[0].BlendEnable = true;
+    alphaBlendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+    alphaBlendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+    alphaBlendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+
+    alphaBlendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+    alphaBlendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+    alphaBlendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+
+    alphaBlendDesc.RenderTarget[0].RenderTargetWriteMask =
+        D3D11_COLOR_WRITE_ENABLE_ALL;
+
+    HRESULT hr = mDevice->CreateBlendState(
+        &alphaBlendDesc,
+        mAlphaBlendState.GetAddressOf());
+
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    D3D11_BLEND_DESC opaqueBlendDesc = {};
+
+    opaqueBlendDesc.AlphaToCoverageEnable = false;
+    opaqueBlendDesc.IndependentBlendEnable = false;
+
+    opaqueBlendDesc.RenderTarget[0].BlendEnable = false;
+    opaqueBlendDesc.RenderTarget[0].RenderTargetWriteMask =
+        D3D11_COLOR_WRITE_ENABLE_ALL;
+
+    hr = mDevice->CreateBlendState(
+        &opaqueBlendDesc,
+        mOpaqueBlendState.GetAddressOf());
+
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    return true;
+}
+
+void Renderer::SetAlphaBlendingEnabled(bool enabled)
+{
+    float blendFactor[4] =
+    {
+        0.0f,
+        0.0f,
+        0.0f,
+        0.0f
+    };
+
+    UINT sampleMask = 0xffffffff;
+
+    ID3D11BlendState* blendState = enabled
+        ? mAlphaBlendState.Get()
+        : mOpaqueBlendState.Get();
+
+    mImmediateContext->OMSetBlendState(
+        blendState,
+        blendFactor,
+        sampleMask);
+}
+
 void Renderer::DrawBox(
     const XMMATRIX& world,
     const XMMATRIX& viewProjection,
     const Material& material)
 {
+
+    UINT stride = sizeof(Vertex);
+    UINT offset = 0;
+
+    ID3D11Buffer* vertexBuffers[] =
+    {
+        mBoxVertexBuffer.Get()
+    };
+
+    mImmediateContext->IASetVertexBuffers(
+        0,
+        1,
+        vertexBuffers,
+        &stride,
+        &offset);
+
+    mImmediateContext->IASetIndexBuffer(
+        mBoxIndexBuffer.Get(),
+        DXGI_FORMAT_R16_UINT,
+        0);
+
+    mImmediateContext->IASetPrimitiveTopology(
+        D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+
     PerObjectConstantBuffer perObjectData = {};
 
     XMMATRIX worldViewProjection = world * viewProjection;
@@ -1011,6 +1398,7 @@ void Renderer::DrawBox(
 
     perObjectData.MaterialDiffuse = material.Diffuse;
     perObjectData.TexTransform = material.TexTransform;
+	perObjectData.EmissiveStrength = material.EmissiveStrength;
 
     mImmediateContext->UpdateSubresource(
         mPerObjectConstantBuffer.Get(),
@@ -1031,11 +1419,80 @@ void Renderer::DrawBox(
         shaderResources);
 
     mImmediateContext->DrawIndexed(
-        mIndexCount,
+        mBoxIndexCount,
         0,
         0);
 }
 
+void Renderer::DrawSphere(
+    const XMMATRIX& world,
+    const XMMATRIX& viewProjection,
+    const Material& material)
+{
+    UINT stride = sizeof(Vertex);
+    UINT offset = 0;
+
+    mImmediateContext->IASetVertexBuffers(
+        0,
+        1,
+        mSphereVertexBuffer.GetAddressOf(),
+        &stride,
+        &offset);
+
+    mImmediateContext->IASetIndexBuffer(
+        mSphereIndexBuffer.Get(),
+        DXGI_FORMAT_R16_UINT,
+        0);
+
+    mImmediateContext->IASetPrimitiveTopology(
+        D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    PerObjectConstantBuffer perObjectData = {};
+
+    XMMATRIX worldViewProjection = world * viewProjection;
+
+    XMMATRIX worldInverseTranspose =
+        XMMatrixTranspose(XMMatrixInverse(nullptr, world));
+
+    XMStoreFloat4x4(
+        &perObjectData.WorldViewProj,
+        worldViewProjection);
+
+    XMStoreFloat4x4(
+        &perObjectData.World,
+        world);
+
+    XMStoreFloat4x4(
+        &perObjectData.WorldInvTranspose,
+        worldInverseTranspose);
+
+    perObjectData.MaterialDiffuse = material.Diffuse;
+    perObjectData.TexTransform = material.TexTransform;
+    perObjectData.EmissiveStrength = material.EmissiveStrength;
+
+    mImmediateContext->UpdateSubresource(
+        mPerObjectConstantBuffer.Get(),
+        0,
+        nullptr,
+        &perObjectData,
+        0,
+        0);
+
+    ID3D11ShaderResourceView* shaderResources[] =
+    {
+        material.DiffuseMap
+    };
+
+    mImmediateContext->PSSetShaderResources(
+        0,
+        1,
+        shaderResources);
+
+    mImmediateContext->DrawIndexed(
+        mSphereIndexCount,
+        0,
+        0);
+}
 
 void Renderer::DrawDoorLabel(
     const XMMATRIX& world,

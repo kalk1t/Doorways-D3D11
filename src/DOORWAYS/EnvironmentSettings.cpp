@@ -1,4 +1,5 @@
 #include "EnvironmentSettings.h"
+#include <cmath>
 
 EnvironmentSettings GetEnvironmentSettings(
     EnvironmentId environment,
@@ -28,20 +29,33 @@ EnvironmentSettings GetEnvironmentSettings(
         break;
     case EnvironmentId::Porch:
     default:
-        settings.ClearColor = XMFLOAT4(0.05f, 0.08f, 0.12f, 1.0f);
+        
+        settings.ClearColor = XMFLOAT4(0.010f, 0.018f, 0.055f, 1.0f);
 
-        float porchPulse = 0.5f + 0.5f * sinf(environmentTime * 1.25f);
+        
+        float moonPulse = 0.5f + 0.5f * sinf(environmentTime * 0.45f);
 
-        float warmStrength = 0.78f + porchPulse * 0.12f;
-        float ambientStrength = 0.18f + porchPulse * 0.05f;
+        float moonStrength = 0.48f + moonPulse * 0.06f;
+        float ambientStrength = 0.095f + moonPulse * 0.015f;
 
         settings.Lighting.LightDirection =
-            XMFLOAT4(0.577f, -0.577f, 0.577f, 0.0f);
+            XMFLOAT4(-0.35f, -0.78f, 0.28f, 0.0f);
+
+#if 1
         settings.Lighting.LightColor =
-            XMFLOAT4(warmStrength, warmStrength * 0.92f, warmStrength * 0.78f, 1.0f);
+            XMFLOAT4(moonStrength * 0.72f,moonStrength * 0.82f,moonStrength,1.0f);
+
+       
+        settings.Lighting.AmbientColor =
+            XMFLOAT4(ambientStrength * 0.75f,ambientStrength * 0.85f,ambientStrength,1.0f);
+#else
+
+        settings.Lighting.LightColor =
+            XMFLOAT4(0.05f, 0.05f, 0.08f, 1.0f);
 
         settings.Lighting.AmbientColor =
-            XMFLOAT4(ambientStrength, ambientStrength, ambientStrength + 0.04f, 1.0f);
+            XMFLOAT4(0.01f, 0.01f, 0.015f, 1.0f);
+#endif
         break;
     }
 

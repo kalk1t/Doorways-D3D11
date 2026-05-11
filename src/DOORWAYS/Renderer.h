@@ -11,6 +11,8 @@ struct Material
     XMFLOAT4 Diffuse;
     XMFLOAT4 TexTransform;
     ID3D11ShaderResourceView* DiffuseMap;
+
+    float EmissiveStrength = 0.0f;
 };
 
 class Renderer
@@ -22,6 +24,8 @@ public:
     void Present();
 
 
+    bool BuildBlendStates();
+	void SetAlphaBlendingEnabled(bool enabled);
     void BindRenderPipeline();
 
     void DrawBox(
@@ -34,15 +38,22 @@ public:
         const XMMATRIX& viewProjection,
         const Material& material);
 
-
+    void DrawSphere(
+        const XMMATRIX& world,
+        const XMMATRIX& viewProjection,
+		const Material& material);
 
 
     bool BuildShaders();
 	bool BuildGeometry();
+    bool BuildBoxGeometry();
+    bool BuildSphereGeometry();
+
 	bool BuildSamplerState();
 	bool BuildTextures();
 
-
+    Microsoft::WRL::ComPtr<ID3D11BlendState> mAlphaBlendState;
+    Microsoft::WRL::ComPtr<ID3D11BlendState> mOpaqueBlendState;
 
     Microsoft::WRL::ComPtr<ID3D11Device> mDevice;
     Microsoft::WRL::ComPtr<ID3D11DeviceContext> mImmediateContext;
@@ -55,8 +66,13 @@ public:
     Microsoft::WRL::ComPtr<ID3D11VertexShader> mVertexShader;
     Microsoft::WRL::ComPtr<ID3D11PixelShader> mPixelShader;
     Microsoft::WRL::ComPtr<ID3D11InputLayout> mInputLayout;
-    Microsoft::WRL::ComPtr<ID3D11Buffer> mVertexBuffer;
-    Microsoft::WRL::ComPtr<ID3D11Buffer> mIndexBuffer;
+
+
+    Microsoft::WRL::ComPtr<ID3D11Buffer> mBoxVertexBuffer;
+    Microsoft::WRL::ComPtr<ID3D11Buffer> mBoxIndexBuffer;
+
+    Microsoft::WRL::ComPtr<ID3D11Buffer> mSphereVertexBuffer;
+    Microsoft::WRL::ComPtr<ID3D11Buffer> mSphereIndexBuffer;
 
 
 
@@ -78,5 +94,14 @@ public:
 
     Microsoft::WRL::ComPtr<ID3D11SamplerState> mSamplerState;
 
-    UINT mIndexCount = 0;
+	//Textures for .jpg loading
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> mMoonTexture;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> mMoonTextureView;
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> mMoonGlowTexture;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> mMoonGlowTextureView;
+
+
+
+    UINT mBoxIndexCount = 0;
+    UINT mSphereIndexCount = 0;
 };

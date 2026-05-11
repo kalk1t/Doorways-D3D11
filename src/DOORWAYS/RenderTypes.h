@@ -19,6 +19,9 @@ struct PerObjectConstantBuffer
     XMFLOAT4X4 WorldInvTranspose;
     XMFLOAT4 MaterialDiffuse;
     XMFLOAT4 TexTransform;
+
+    float EmissiveStrength; 
+	XMFLOAT3 Padding; // Padding to make the size a multiple of 16 bytes.
 };
 
 struct PerFrameConstantBuffer

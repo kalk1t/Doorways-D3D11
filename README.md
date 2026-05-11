@@ -53,105 +53,28 @@ Im using it as an learning tool, thanks OpenAI.
 
 ## Current Milestone
 
-## Milestone 11 — App Cleanup and Architecture Stabilization
+## Milestone 12 — Realistic Moon Foundation
 
-**Goal:**  
-Clean up the project structure after Milestone 10 so the codebase is ready for larger environment features, better scene composition, and future realism work.
-
-This milestone does not focus on adding a major new visual feature. Instead, it focuses on separating responsibilities so the project can grow without turning `App` into one large file that controls everything.
+Milestone 12 begins the realism pass for the porch environment by focusing on one object first: the Moon.
 
 ### Completed
 
-- Cleaned up the main `App` class so it is mainly responsible for:
-  - window creation
-  - application initialization
-  - main loop timing
-  - per-frame update
-  - per-frame render call
-  - window title updates
+- Added NASA Moon texture asset support.
+- Loaded `moon_color_2k.jpg` from `Assets/Textures/Moon/`.
+- Added dedicated Moon texture resources to the renderer.
+- Refactored geometry handling so the renderer can support both box and sphere meshes.
+- Added UV sphere generation for realistic Moon geometry.
+- Added `DrawSphere()` for rendering textured spherical objects.
+- Added `MakeWorldSRT()` for scale, rotation, and translation transforms.
+- Replaced the old fake box-patch Moon with a real NASA-textured sphere.
+- Added alpha blending support.
+- Added a procedural circular Moon glow texture.
+- Rendered a soft transparent halo behind the Moon.
+- Added emissive material support.
+- Made the Moon and its glow independently visible from porch lighting.
 
-- Added a dedicated `DoorSystem` for doorway gameplay logic:
-  - nearby door detection
-  - door display names
-  - `E` key interaction handling
-  - entering Sunny, Rainy, and Snowy environments
-  - resetting back to the porch
+- ScreenShot Added for the Moon work
 
-- Added a dedicated `WorldRenderer` for scene-level drawing:
-  - porch floor
-  - three doorways
-  - doorway labels
-  - player model
-  - interaction prompt
-  - environment-specific objects
-  - animated doorway glow
+### Result
 
-- Added a dedicated `WorldState` structure to hold active world data:
-  - main camera
-  - main player
-  - active environment
-  - nearby door
-  - environment timer
-  - previous interact-key state
-
-- Added a dedicated `Camera` class:
-  - camera position
-  - yaw/pitch rotation
-  - view-projection matrix creation
-
-- Kept player data separate in `Player`:
-  - player position
-  - player yaw/facing direction
-  - movement speed
-
-- Kept environment lighting and clear-color logic inside `EnvironmentSettings`:
-  - Porch lighting
-  - Sunny lighting
-  - Rainy lighting
-  - Snowy lighting
-  - animated porch light pulse
-
-- Preserved Milestone 10 visual atmosphere work:
-  - Sunny environment with moving clouds and pulsing sun rays
-  - Rainy environment with storm clouds, falling rain, and puddles
-  - Snowy environment with mountains, mist, snow patches, and drifting snowflakes
-  - Doorway atmosphere glow based on nearby/active door state
-
-- Maintained the Direct3D 11 render pipeline:
-  - textured boxes
-  - normals
-  - material diffuse color
-  - per-object constant buffer
-  - per-frame lighting constant buffer
-  - texture sampling in HLSL
-
-### Current Controls
-
-| Key | Action |
-|---|---|
-| `W` / `S` | Move player forward/backward |
-| `A` / `D` | Move player left/right |
-| Arrow keys | Rotate camera |
-| `E` | Enter nearby doorway |
-| `R` | Reset back to porch |
-| `Esc` | Close application |
-
-### Study Notes
-
-This milestone is important because it introduces better code ownership.
-
-Before this cleanup, too much logic lived inside `App`. That works for a small demo, but it becomes hard to maintain when the project grows.
-
-Now the project has clearer responsibilities:
-
-| System | Responsibility |
-|---|---|
-| `App` | Runs the application and coordinates systems |
-| `Renderer` | Owns Direct3D resources and low-level drawing |
-| `WorldRenderer` | Draws the world and environment objects |
-| `DoorSystem` | Controls door proximity and interaction logic |
-| `WorldState` | Stores current world/game state |
-| `Camera` | Builds the view-projection matrix |
-| `EnvironmentSettings` | Provides lighting and background color per environment |
-
-This makes the project ready for the next stage: replacing simple placeholder geometry with more realistic world features.
+The porch scene now contains a NASA-textured 3D Moon sphere with a soft glow, instead of a flat box-based placeholder. The Moon is now ready for future advanced realism work such as billboard effects, improved sky rendering, Moon phases, and NASA elevation/normal-map detail.

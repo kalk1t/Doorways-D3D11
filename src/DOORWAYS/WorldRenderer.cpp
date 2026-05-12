@@ -12,6 +12,145 @@
 using namespace DirectX;
 
 
+namespace
+{
+    struct MountainPeakSpec
+    {
+        float Position;
+        float Width;
+        float Height;
+        float Depth;
+        float BaseYOffset;
+    };
+
+
+    enum class MountainSide
+    {
+        Front,
+        Back,
+        Left,
+        Right
+    };
+
+    constexpr float kMountainBaseY = -0.65f;
+
+    constexpr float kForegroundMountainDistance = 42.0f;
+    constexpr float kShoulderMountainDistance = 46.0f;
+    constexpr float kBackgroundMountainDistance = 58.0f;
+
+        
+    constexpr MountainPeakSpec kFrontPeaks[] =
+    {
+        { -34.0f, 18.0f, 15.0f, 8.0f, -0.4f },
+        { -20.0f, 14.0f, 19.0f, 9.0f,  0.1f },
+        {  -8.0f, 20.0f, 13.0f, 7.0f, -0.2f },
+        {   8.0f, 16.0f, 21.0f, 9.5f, 0.0f },
+        {  23.0f, 19.0f, 16.0f, 8.0f, -0.3f },
+        {  37.0f, 13.0f, 18.0f, 7.5f, 0.2f },
+    };
+
+    const MountainPeakSpec kBackPeaks[] =
+    {
+        { -38.0f, 20.0f, 17.0f, 9.0f, -0.2f },
+        { -22.0f, 15.0f, 22.0f, 8.0f,  0.1f },
+        {  -5.0f, 23.0f, 14.0f, 9.5f, -0.4f },
+        {  13.0f, 17.0f, 20.0f, 8.5f, 0.2f },
+        {  31.0f, 21.0f, 16.0f, 9.0f, -0.1f },
+    };
+
+    const MountainPeakSpec kLeftPeaks[] =
+    {
+        { -36.0f, 18.0f, 16.0f, 8.0f, -0.3f },
+        { -19.0f, 14.0f, 21.0f, 9.0f,  0.1f },
+        {  -2.0f, 22.0f, 15.0f, 8.5f, -0.2f },
+        {  17.0f, 16.0f, 19.0f, 8.0f,  0.0f },
+        {  34.0f, 19.0f, 14.0f, 7.5f, -0.1f },
+    };
+
+    const MountainPeakSpec kRightPeaks[] =
+    {
+        { -33.0f, 16.0f, 20.0f, 8.5f,  0.0f },
+        { -16.0f, 21.0f, 15.0f, 7.5f, -0.3f },
+        {   0.0f, 15.0f, 23.0f, 9.5f,  0.1f },
+        {  18.0f, 20.0f, 17.0f, 8.0f, -0.2f },
+        {  36.0f, 14.0f, 18.0f, 7.0f,  0.2f },
+    };
+
+
+    const MountainPeakSpec kShoulderFrontPeaks[] =
+    {
+        { -27.0f, 10.0f, 10.0f, 6.0f, -0.6f },
+        { -14.0f, 12.0f, 12.5f, 6.5f, -0.4f },
+        {   1.0f,  9.0f, 11.0f, 5.5f, -0.5f },
+        {  16.0f, 11.0f, 13.0f, 6.0f, -0.7f },
+        {  30.0f, 10.0f, 10.5f, 5.5f, -0.4f },
+    };
+
+    const MountainPeakSpec kShoulderBackPeaks[] =
+    {
+        { -30.0f, 11.0f, 11.5f, 6.0f, -0.5f },
+        { -12.0f,  9.0f, 13.0f, 5.5f, -0.7f },
+        {   4.0f, 12.0f, 10.0f, 6.5f, -0.4f },
+        {  21.0f, 10.0f, 12.0f, 5.5f, -0.6f },
+    };
+
+    const MountainPeakSpec kShoulderLeftPeaks[] =
+    {
+        { -28.0f, 10.0f, 11.0f, 6.0f, -0.5f },
+        { -10.0f, 12.0f, 13.0f, 6.5f, -0.6f },
+        {   8.0f,  9.0f, 10.5f, 5.5f, -0.4f },
+        {  25.0f, 11.0f, 12.0f, 6.0f, -0.7f },
+    };
+
+    const MountainPeakSpec kShoulderRightPeaks[] =
+    {
+        { -27.0f, 11.0f, 12.5f, 6.0f, -0.6f },
+        {  -9.0f,  9.0f, 10.0f, 5.5f, -0.5f },
+        {   9.0f, 12.0f, 13.5f, 6.5f, -0.7f },
+        {  27.0f, 10.0f, 11.0f, 5.5f, -0.4f },
+    };
+
+
+
+
+    const MountainPeakSpec kBackgroundFrontPeaks[] =
+    {
+        { -45.0f, 28.0f, 19.0f, 10.0f, -1.1f },
+        { -23.0f, 24.0f, 25.0f, 11.0f, -0.8f },
+        {   1.0f, 32.0f, 21.0f, 10.5f, -1.3f },
+        {  26.0f, 23.0f, 27.0f, 11.0f, -0.9f },
+        {  48.0f, 29.0f, 20.0f, 10.0f, -1.2f },
+    };
+
+    const MountainPeakSpec kBackgroundBackPeaks[] =
+    {
+        { -46.0f, 30.0f, 20.0f, 10.5f, -1.0f },
+        { -21.0f, 24.0f, 26.0f, 11.0f, -0.9f },
+        {   5.0f, 33.0f, 18.0f, 10.0f, -1.3f },
+        {  30.0f, 26.0f, 24.0f, 11.0f, -1.0f },
+        {  50.0f, 23.0f, 22.0f, 10.0f, -1.1f },
+    };
+
+    const MountainPeakSpec kBackgroundLeftPeaks[] =
+    {
+        { -46.0f, 27.0f, 20.0f, 10.0f, -1.1f },
+        { -23.0f, 23.0f, 27.0f, 11.0f, -0.8f },
+        {   2.0f, 31.0f, 21.0f, 10.5f, -1.2f },
+        {  28.0f, 25.0f, 24.0f, 11.0f, -0.9f },
+        {  49.0f, 26.0f, 19.0f, 10.0f, -1.0f },
+    };
+
+    const MountainPeakSpec kBackgroundRightPeaks[] =
+    {
+        { -48.0f, 25.0f, 23.0f, 10.0f, -1.0f },
+        { -25.0f, 30.0f, 19.0f, 10.5f, -1.2f },
+        {  -1.0f, 24.0f, 28.0f, 11.0f, -0.8f },
+        {  25.0f, 32.0f, 21.0f, 10.0f, -1.1f },
+        {  48.0f, 23.0f, 25.0f, 10.5f, -0.9f },
+    };
+
+}
+
 XMMATRIX MakeWorld(
     float scaleX,float scaleY,float scaleZ,
     float translateX,float translateY,float translateZ)
@@ -41,7 +180,7 @@ void WorldRenderer::DrawPorchEnvironment(const XMMATRIX& viewProjection)
     DrawNightSky(viewProjection);
     DrawMoon(viewProjection);
 
-    //DrawMountainRing(viewProjection);
+    //DrawMountains(viewProjection);
     //DrawWaterfall(viewProjection);
 
     DrawPorchFloor(viewProjection);
@@ -93,10 +232,12 @@ void WorldRenderer::DrawNightSky(const XMMATRIX& viewProjection)
         1.0f
     };
 
-    constexpr float skyDistance = 28.0f;
-    constexpr float skyHeight = 18.0f;
-    constexpr float skyPanelSize = 56.0f;
+    constexpr float skyDistance = 90.0f;
+    constexpr float skyHeight = 60.0f;
+    constexpr float skyPanelSize = 180.0f;
     constexpr float skyThickness = 0.10f;
+    constexpr float skyCenterY = 25.0f;
+    constexpr float skyTopY = 55.0f;
 
     // Front sky wall.
     XMMATRIX frontSkyWorld = MakeWorld(
@@ -104,7 +245,7 @@ void WorldRenderer::DrawNightSky(const XMMATRIX& viewProjection)
         skyHeight,
         skyThickness,
         0.0f,
-        6.5f,
+        skyCenterY,
         skyDistance);
 
     mApp->mRenderer.DrawBox(
@@ -118,7 +259,7 @@ void WorldRenderer::DrawNightSky(const XMMATRIX& viewProjection)
         skyHeight,
         skyThickness,
         0.0f,
-        6.5f,
+        skyCenterY,
         -skyDistance);
 
     mApp->mRenderer.DrawBox(
@@ -132,7 +273,7 @@ void WorldRenderer::DrawNightSky(const XMMATRIX& viewProjection)
         skyHeight,
         skyPanelSize,
         -skyDistance,
-        6.5f,
+        skyCenterY,
         0.0f);
 
     mApp->mRenderer.DrawBox(
@@ -146,7 +287,7 @@ void WorldRenderer::DrawNightSky(const XMMATRIX& viewProjection)
         skyHeight,
         skyPanelSize,
         skyDistance,
-        6.5f,
+        skyCenterY,
         0.0f);
 
     mApp->mRenderer.DrawBox(
@@ -160,7 +301,7 @@ void WorldRenderer::DrawNightSky(const XMMATRIX& viewProjection)
         skyThickness,
         skyPanelSize,
         0.0f,
-        15.5f,
+        skyTopY,
         0.0f);
 
     mApp->mRenderer.DrawBox(
@@ -188,7 +329,7 @@ void WorldRenderer::DrawNightSky(const XMMATRIX& viewProjection)
     // Front lower sky darkening.
     XMMATRIX frontHorizonWorld = MakeWorld(
         skyPanelSize,
-        5.0f,
+        12.0f,
         0.06f,
         0.0f,
         0.2f,
@@ -289,7 +430,7 @@ void WorldRenderer::DrawMoon(const XMMATRIX& viewProjection)
     constexpr float moonRotZ = 0.0f;
 
     constexpr float moonX = 7.5f;
-    constexpr float moonY = 3.0f;
+    constexpr float moonY = 33.0f;
     constexpr float moonZ = 26.80f;
 
     
@@ -770,259 +911,739 @@ void WorldRenderer::DrawPorchFence(const XMMATRIX& viewProjection)
     }
 }
 
-void WorldRenderer::DrawMountainRing(const XMMATRIX& viewProjection)
+void WorldRenderer::DrawMountains(const XMMATRIX& viewProjection)
 {
-    Material farMountainMaterial =
+
+    Material mainRockMaterial =
     {
-        XMFLOAT4(0.075f, 0.090f, 0.145f, 1.0f),
-        XMFLOAT4(2.0f, 2.0f, 0.0f, 0.0f),
-        mApp->mRenderer.mDiffuseTextureView.Get()
+        XMFLOAT4(0.58f, 0.58f, 0.64f, 1.0f),
+        XMFLOAT4(3.0f, 3.0f, 0.0f, 0.0f),
+        mApp->mRenderer.mMountainSRV.Get(),
+        1.0f
     };
 
-    Material midMountainMaterial =
+    Material shadowRockMaterial =
     {
-        XMFLOAT4(0.105f, 0.120f, 0.175f, 1.0f),
-        XMFLOAT4(2.0f, 2.0f, 0.0f, 0.0f),
-        mApp->mRenderer.mDiffuseTextureView.Get()
+        XMFLOAT4(0.34f, 0.36f, 0.44f, 1.0f),
+        XMFLOAT4(3.0f, 3.0f, 0.0f, 0.0f),
+        mApp->mRenderer.mMountainSRV.Get(),
+        1.0f
     };
 
-    Material nearMountainMaterial =
+    Material baseRockMaterial =
     {
-        XMFLOAT4(0.045f, 0.055f, 0.090f, 1.0f),
-        XMFLOAT4(2.0f, 2.0f, 0.0f, 0.0f),
-        mApp->mRenderer.mDiffuseTextureView.Get()
+        XMFLOAT4(0.26f, 0.28f, 0.34f, 1.0f),
+        XMFLOAT4(4.0f, 1.5f, 0.0f, 0.0f),
+        mApp->mRenderer.mMountainSRV.Get(),
+        1.0f
     };
 
     Material snowCapMaterial =
     {
-        XMFLOAT4(0.48f, 0.56f, 0.72f, 1.0f),
+        XMFLOAT4(0.76f, 0.82f, 0.94f, 1.0f),
         XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
-        mApp->mRenderer.mDiffuseTextureView.Get()
+        mApp->mRenderer.mWhiteTextureView.Get(),
+        1.0f
     };
 
-    auto DrawFrontMountain =
-        [this, &viewProjection](
-            float x,
+    auto MakeRepeatedMaterial =
+        [](const Material& baseMaterial,
+            float width,
+            float height)
+        {
+            Material result = baseMaterial;
+
+            float uRepeat = width / 8.0f;
+            float vRepeat = height / 8.0f;
+
+            if (uRepeat < 1.0f)
+            {
+                uRepeat = 1.0f;
+            }
+
+            if (vRepeat < 1.0f)
+            {
+                vRepeat = 1.0f;
+            }
+
+            result.TexTransform = XMFLOAT4(
+                uRepeat,
+                vRepeat,
+                0.0f,
+                0.0f);
+
+            return result;
+        };
+
+    auto DrawPeak =
+        [&](float x,
             float z,
             float width,
             float height,
-            const Material& mountainMaterial,
-            const Material& snowMaterial)
+            float depth,
+            float baseY,
+            float rotationY,
+            const Material& material)
         {
-            constexpr float baseY = -0.65f;
             float centerY = baseY + height * 0.5f;
 
-            XMMATRIX mountainWorld = MakeWorld(
-                width,
-                height,
-                0.40f,
-                x,
-                centerY,
-                z);
+            XMMATRIX world =
+                XMMatrixScaling(width, height, depth) *
+                XMMatrixRotationY(rotationY) *
+                XMMatrixTranslation(x, centerY, z);
 
-            mApp->mRenderer.DrawBox(
-                mountainWorld,
+            Material repeatedMaterial =
+                MakeRepeatedMaterial(
+                    material,
+                    width,
+                    height);
+
+            mApp->mRenderer.DrawMountainPeak(
+                world,
                 viewProjection,
-                mountainMaterial);
-
-            XMMATRIX snowCapWorld = MakeWorld(
-                width * 0.42f,
-                height * 0.16f,
-                0.42f,
-                x,
-                baseY + height * 0.88f,
-                z - 0.04f);
-
-            mApp->mRenderer.DrawBox(
-                snowCapWorld,
-                viewProjection,
-                snowMaterial);
+                repeatedMaterial);
         };
 
-    auto DrawBackMountain =
-        [this, &viewProjection](
-            float x,
+    auto DrawSnowCap =
+        [&](float x,
             float z,
             float width,
             float height,
-            const Material& mountainMaterial,
-            const Material& snowMaterial)
+            float depth,
+            float baseY,
+            float rotationY)
         {
-            constexpr float baseY = -0.65f;
-            float centerY = baseY + height * 0.5f;
+            // Main snow cap near the peak.
+            {
+                float capHeight = height * 0.22f;
+                float capWidth = width * 0.34f;
+                float capDepth = depth * 1.05f;
 
-            XMMATRIX mountainWorld = MakeWorld(
-                width,
-                height,
-                0.40f,
-                x,
-                centerY,
-                z);
+                float capBaseY = baseY + height - capHeight;
+                float capCenterY = capBaseY + capHeight * 0.5f;
 
-            mApp->mRenderer.DrawBox(
-                mountainWorld,
-                viewProjection,
-                mountainMaterial);
+                XMMATRIX world =
+                    XMMatrixScaling(capWidth, capHeight, capDepth) *
+                    XMMatrixRotationY(rotationY) *
+                    XMMatrixTranslation(x, capCenterY, z);
 
-            XMMATRIX snowCapWorld = MakeWorld(
-                width * 0.42f,
-                height * 0.16f,
-                0.42f,
-                x,
-                baseY + height * 0.88f,
-                z + 0.04f);
+                mApp->mRenderer.DrawMountainPeak(
+                    world,
+                    viewProjection,
+                    snowCapMaterial);
+            }
 
-            mApp->mRenderer.DrawBox(
-                snowCapWorld,
-                viewProjection,
-                snowMaterial);
+            // Left snow streak running slightly down the mountain face.
+            {
+                float patchHeight = height * 0.16f;
+                float patchWidth = width * 0.16f;
+                float patchDepth = depth * 1.07f;
+
+                float patchBaseY = baseY + height * 0.62f;
+                float patchCenterY = patchBaseY + patchHeight * 0.5f;
+
+                XMMATRIX world =
+                    XMMatrixScaling(patchWidth, patchHeight, patchDepth) *
+                    XMMatrixRotationY(rotationY - 0.10f) *
+                    XMMatrixTranslation(x - width * 0.12f, patchCenterY, z - 0.15f);
+
+                mApp->mRenderer.DrawMountainPeak(
+                    world,
+                    viewProjection,
+                    snowCapMaterial);
+            }
+
+            // Smaller right snow patch.
+            {
+                float patchHeight = height * 0.12f;
+                float patchWidth = width * 0.12f;
+                float patchDepth = depth * 1.06f;
+
+                float patchBaseY = baseY + height * 0.54f;
+                float patchCenterY = patchBaseY + patchHeight * 0.5f;
+
+                XMMATRIX world =
+                    XMMatrixScaling(patchWidth, patchHeight, patchDepth) *
+                    XMMatrixRotationY(rotationY + 0.12f) *
+                    XMMatrixTranslation(x + width * 0.14f, patchCenterY, z - 0.20f);
+
+                mApp->mRenderer.DrawMountainPeak(
+                    world,
+                    viewProjection,
+                    snowCapMaterial);
+            }
         };
 
-    auto DrawLeftMountain =
-        [this, &viewProjection](
-            float x,
-            float z,
+
+    constexpr float mountainZ = 42.0f;
+    constexpr float mountainBaseY = -0.80f;
+    constexpr float mountainRotationY = 0.0f;
+
+    // Rear dark mass behind the main peak.
+// This makes the mountain feel thicker instead of like a flat triangle.
+    DrawPeak(
+        -2.0f,
+        mountainZ + 2.0f,
+        24.0f,
+        19.0f,
+        13.0f,
+        mountainBaseY - 0.6f,
+        mountainRotationY,
+        shadowRockMaterial);
+
+    // Main tall center peak.
+    DrawPeak(
+        0.0f,
+        mountainZ,
+        22.0f,
+        24.0f,
+        11.0f,
+        mountainBaseY,
+        mountainRotationY,
+        mainRockMaterial);
+
+    // Dark left shoulder.
+    // Slight rotation breaks the artificial symmetry.
+    DrawPeak(
+        -9.5f,
+        mountainZ - 1.5f,
+        15.0f,
+        15.0f,
+        9.0f,
+        mountainBaseY - 0.3f,
+        -0.10f,
+        shadowRockMaterial);
+
+    // Dark right shoulder.
+    // Slight opposite rotation gives the silhouette more natural variation.
+    DrawPeak(
+        10.5f,
+        mountainZ - 0.5f,
+        17.0f,
+        17.0f,
+        9.5f,
+        mountainBaseY - 0.2f,
+        0.12f,
+        shadowRockMaterial);
+
+    // Small front-left rocky ridge.
+    DrawPeak(
+        -5.0f,
+        mountainZ - 4.0f,
+        9.0f,
+        10.0f,
+        6.5f,
+        mountainBaseY - 0.5f,
+        -0.18f,
+        baseRockMaterial);
+
+    // Small front-right rocky ridge.
+    DrawPeak(
+        6.0f,
+        mountainZ - 3.5f,
+        10.0f,
+        11.0f,
+        6.5f,
+        mountainBaseY - 0.45f,
+        0.16f,
+        baseRockMaterial);
+
+    // Low front base ridge.
+    // This hides the clean triangle bottoms and connects the pieces.
+    XMMATRIX baseWorld =
+        XMMatrixScaling(36.0f, 5.0f, 8.0f) *
+        XMMatrixTranslation(0.0f, mountainBaseY + 2.5f, mountainZ - 2.5f);
+
+    mApp->mRenderer.DrawBox(
+        baseWorld,
+        viewProjection,
+        baseRockMaterial);
+
+    // Snow on main peak only.
+    DrawSnowCap(
+        0.0f,
+        mountainZ,
+        22.0f,
+        24.0f,
+        11.0f,
+        mountainBaseY,
+        mountainRotationY);
+
+
+    /*
+    Material backgroundMountainMaterial =
+    {
+        XMFLOAT4(0.34f, 0.36f, 0.44f, 1.0f),
+        XMFLOAT4(3.5f, 3.5f, 0.0f, 0.0f),
+        mApp->mRenderer.mMountainSRV.Get(),
+        1.0f
+    };
+
+    Material shoulderMountainMaterial =
+    {
+        XMFLOAT4(0.42f, 0.44f, 0.52f, 1.0f),
+        XMFLOAT4(3.0f, 3.0f, 0.0f, 0.0f),
+        mApp->mRenderer.mMountainSRV.Get(),
+        1.0f
+    };
+
+    Material farMountainMaterial =
+    {
+        XMFLOAT4(0.46f, 0.48f, 0.56f, 1.0f),
+        XMFLOAT4(3.0f, 3.0f, 0.0f, 0.0f),
+        mApp->mRenderer.mMountainSRV.Get(),
+        1.0f
+    };
+
+    Material midMountainMaterial =
+    {
+        XMFLOAT4(0.55f, 0.56f, 0.62f, 1.0f),
+        XMFLOAT4(3.0f, 3.0f, 0.0f, 0.0f),
+        mApp->mRenderer.mMountainSRV.Get(),
+        1.0f
+    };
+
+    Material foothillMaterial =
+    {
+        XMFLOAT4(0.28f, 0.30f, 0.36f, 1.0f),
+        XMFLOAT4(4.0f, 1.5f, 0.0f, 0.0f),
+        mApp->mRenderer.mMountainSRV.Get(),
+        1.0f
+    };
+
+    Material snowCapMaterial =
+    {
+        XMFLOAT4(0.70f, 0.76f, 0.88f, 1.0f),
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+        mApp->mRenderer.mWhiteTextureView.Get(),
+        1.0f
+    };
+
+    Material mountainMistMaterial =
+    {
+        XMFLOAT4(0.18f, 0.22f, 0.34f, 0.18f),
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+        mApp->mRenderer.mWhiteTextureView.Get(),
+        1.0f
+    };
+
+    auto DrawFrontBackMistBand =
+        [&](float z,
+            float centerY,
+            float width,
+            float height,
+            float alpha)
+        {
+            Material mistMaterial =
+            {
+                XMFLOAT4(0.18f, 0.22f, 0.34f, alpha),
+                XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+                mApp->mRenderer.mWhiteTextureView.Get(),
+                1.0f
+            };
+
+            XMMATRIX mistWorld =
+                XMMatrixScaling(width, height, 0.08f) *
+                XMMatrixTranslation(0.0f, centerY, z);
+
+            mApp->mRenderer.DrawBox(
+                mistWorld,
+                viewProjection,
+                mistMaterial);
+        };
+
+    auto DrawLeftRightMistBand =
+        [&](float x,
+            float centerY,
             float depth,
             float height,
-            const Material& mountainMaterial,
-            const Material& snowMaterial)
+            float alpha)
         {
-            constexpr float baseY = -0.65f;
-            float centerY = baseY + height * 0.5f;
+            Material mistMaterial =
+            {
+                XMFLOAT4(0.18f, 0.22f, 0.34f, alpha),
+                XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+                mApp->mRenderer.mWhiteTextureView.Get(),
+                1.0f
+            };
 
-            XMMATRIX mountainWorld = MakeWorld(
-                0.40f,
-                height,
-                depth,
-                x,
-                centerY,
-                z);
-
-            mApp->mRenderer.DrawBox(
-                mountainWorld,
-                viewProjection,
-                mountainMaterial);
-
-            XMMATRIX snowCapWorld = MakeWorld(
-                0.42f,
-                height * 0.16f,
-                depth * 0.42f,
-                x + 0.04f,
-                baseY + height * 0.88f,
-                z);
+            XMMATRIX mistWorld =
+                XMMatrixScaling(0.08f, height, depth) *
+                XMMatrixTranslation(x, centerY, 0.0f);
 
             mApp->mRenderer.DrawBox(
-                snowCapWorld,
+                mistWorld,
                 viewProjection,
-                snowMaterial);
+                mistMaterial);
         };
 
-    auto DrawRightMountain =
-        [this, &viewProjection](
-            float x,
+
+    auto DrawFrontBackFoothill =
+        [&](float z,
+            const Material& material)
+        {
+            constexpr float baseY = -0.70f;
+
+            XMMATRIX foothillWorld =
+                XMMatrixScaling(95.0f, 4.0f, 5.5f) *
+                XMMatrixTranslation(0.0f, baseY + 2.0f, z);
+
+            mApp->mRenderer.DrawBox(
+                foothillWorld,
+                viewProjection,
+                material);
+        };
+    auto DrawLeftRightFoothill =
+        [&](float x,
+            const Material& material)
+        {
+            constexpr float baseY = -0.70f;
+
+            XMMATRIX foothillWorld =
+                XMMatrixScaling(5.5f, 4.0f, 95.0f) *
+                XMMatrixTranslation(x, baseY + 2.0f, 0.0f);
+
+            mApp->mRenderer.DrawBox(
+                foothillWorld,
+                viewProjection,
+                material);
+        };
+
+
+    auto MakeMountainMaterial =
+        [](const Material& baseMaterial,
+            float width,
+            float height)
+        {
+            Material result = baseMaterial;
+
+            float uRepeat = width / 8.0f;
+            float vRepeat = height / 8.0f;
+
+            if (uRepeat < 1.0f)
+            {
+                uRepeat = 1.0f;
+            }
+
+            if (vRepeat < 1.0f)
+            {
+                vRepeat = 1.0f;
+            }
+
+            result.TexTransform = XMFLOAT4(
+                uRepeat,
+                vRepeat,
+                0.0f,
+                0.0f);
+
+            return result;
+        };
+
+    auto DrawMountainSnowCap =
+        [&](float x,
             float z,
-            float depth,
+            float width,
             float height,
-            const Material& mountainMaterial,
-            const Material& snowMaterial)
+            float depth,
+            float baseYOffset,
+            float rotationY)
         {
-            constexpr float baseY = -0.65f;
-            float centerY = baseY + height * 0.5f;
 
-            XMMATRIX mountainWorld = MakeWorld(
-                0.40f,
-                height,
-                depth,
-                x,
-                centerY,
-                z);
+            float adjustedBaseY = kMountainBaseY + baseYOffset;
 
-            mApp->mRenderer.DrawBox(
-                mountainWorld,
-                viewProjection,
-                mountainMaterial);
+            float capHeight = height * 0.26f;
+            float capWidth = width * 0.30f;
+            float capDepth = depth * 1.04f;
 
-            XMMATRIX snowCapWorld = MakeWorld(
-                0.42f,
-                height * 0.16f,
-                depth * 0.42f,
-                x - 0.04f,
-                baseY + height * 0.88f,
-                z);
+            float capBaseY = adjustedBaseY + height - capHeight;
+            float capCenterY = capBaseY + capHeight * 0.5f;
 
-            mApp->mRenderer.DrawBox(
+            XMMATRIX snowCapWorld =
+                XMMatrixScaling(capWidth, capHeight, capDepth) *
+                XMMatrixRotationY(rotationY) *
+                XMMatrixTranslation(x, capCenterY, z);
+
+            mApp->mRenderer.DrawMountainPeak(
                 snowCapWorld,
                 viewProjection,
-                snowMaterial);
+                snowCapMaterial);
         };
 
+    auto DrawMountainInstance =
+        [&](MountainSide side,
+            float fixedCoordinate,
+            const MountainPeakSpec& peak,
+            const Material& mountainMaterial,
+            bool drawSnowCap)
+        {
+            float x = 0.0f;
+            float z = 0.0f;
+            float rotationY = 0.0f;
+
+            switch (side)
+            {
+            case MountainSide::Front:
+                x = peak.Position;
+                z = -fixedCoordinate;
+                rotationY = 0.0f;
+                break;
+
+            case MountainSide::Back:
+                x = peak.Position;
+                z = fixedCoordinate;
+                rotationY = 0.0f;
+                break;
+
+            case MountainSide::Left:
+                x = -fixedCoordinate;
+                z = peak.Position;
+                rotationY = XM_PIDIV2;
+                break;
+
+            case MountainSide::Right:
+                x = fixedCoordinate;
+                z = peak.Position;
+                rotationY = -XM_PIDIV2;
+                break;
+            }
+
+            float adjustedBaseY = kMountainBaseY + peak.BaseYOffset;
+            float centerY = adjustedBaseY + peak.Height * 0.5f;
+
+            XMMATRIX mountainWorld =
+                XMMatrixScaling(peak.Width, peak.Height, peak.Depth) *
+                XMMatrixRotationY(rotationY) *
+                XMMatrixTranslation(x, centerY, z);
+
+            Material repeatedMountainMaterial =
+                MakeMountainMaterial(
+                    mountainMaterial,
+                    peak.Width,
+                    peak.Height);
+
+            mApp->mRenderer.DrawMountainPeak(
+                mountainWorld,
+                viewProjection,
+                repeatedMountainMaterial);
+
+            if (drawSnowCap)
+            {
+                DrawMountainSnowCap(
+                    x,
+                    z,
+                    peak.Width,
+                    peak.Height,
+                    peak.Depth,
+                    peak.BaseYOffset,
+                    rotationY);
+            }
+        };
+
+    for (const MountainPeakSpec& peak : kBackgroundFrontPeaks)
+    {
+        DrawMountainInstance(
+            MountainSide::Front,
+            kBackgroundMountainDistance,
+            peak,
+            backgroundMountainMaterial,
+            false);
+    }
+
+    for (const MountainPeakSpec& peak : kBackgroundBackPeaks)
+    {
+        DrawMountainInstance(
+            MountainSide::Back,
+            kBackgroundMountainDistance,
+            peak,
+            backgroundMountainMaterial,
+            false);
+    }
+
+    for (const MountainPeakSpec& peak : kBackgroundLeftPeaks)
+    {
+        DrawMountainInstance(
+            MountainSide::Left,
+            kBackgroundMountainDistance,
+            peak,
+            backgroundMountainMaterial,
+            false);
+    }
+
+    for (const MountainPeakSpec& peak : kBackgroundRightPeaks)
+    {
+        DrawMountainInstance(
+            MountainSide::Right,
+            kBackgroundMountainDistance,
+            peak,
+            backgroundMountainMaterial,
+            false);
+    }
+
+
     // ============================================================
-    // Far mountain layer
+    // Shoulder / secondary mountain layer
     // ============================================================
 
-    DrawFrontMountain(-14.0f, 23.0f, 8.0f, 5.8f, farMountainMaterial, snowCapMaterial);
-    DrawFrontMountain(-6.5f, 23.0f, 7.0f, 6.7f, farMountainMaterial, snowCapMaterial);
-    DrawFrontMountain(1.0f, 23.0f, 8.5f, 7.5f, farMountainMaterial, snowCapMaterial);
-    DrawFrontMountain(10.0f, 23.0f, 7.5f, 6.2f, farMountainMaterial, snowCapMaterial);
-    DrawFrontMountain(17.5f, 23.0f, 6.0f, 5.4f, farMountainMaterial, snowCapMaterial);
+    for (const MountainPeakSpec& peak : kShoulderFrontPeaks)
+    {
+        DrawMountainInstance(
+            MountainSide::Front,
+            kShoulderMountainDistance,
+            peak,
+            shoulderMountainMaterial,
+            false);
+    }
 
-    DrawBackMountain(-15.0f, -23.0f, 7.0f, 5.6f, farMountainMaterial, snowCapMaterial);
-    DrawBackMountain(-7.5f, -23.0f, 8.0f, 6.9f, farMountainMaterial, snowCapMaterial);
-    DrawBackMountain(1.5f, -23.0f, 7.5f, 7.2f, farMountainMaterial, snowCapMaterial);
-    DrawBackMountain(10.0f, -23.0f, 8.0f, 6.4f, farMountainMaterial, snowCapMaterial);
-    DrawBackMountain(17.0f, -23.0f, 6.0f, 5.5f, farMountainMaterial, snowCapMaterial);
+    for (const MountainPeakSpec& peak : kShoulderBackPeaks)
+    {
+        DrawMountainInstance(
+            MountainSide::Back,
+            kShoulderMountainDistance,
+            peak,
+            shoulderMountainMaterial,
+            false);
+    }
 
-    DrawLeftMountain(-23.0f, -14.0f, 8.0f, 5.8f, farMountainMaterial, snowCapMaterial);
-    DrawLeftMountain(-23.0f, -6.0f, 7.0f, 6.6f, farMountainMaterial, snowCapMaterial);
-    DrawLeftMountain(-23.0f, 2.5f, 8.5f, 7.3f, farMountainMaterial, snowCapMaterial);
-    DrawLeftMountain(-23.0f, 11.5f, 7.5f, 6.1f, farMountainMaterial, snowCapMaterial);
+    for (const MountainPeakSpec& peak : kShoulderLeftPeaks)
+    {
+        DrawMountainInstance(
+            MountainSide::Left,
+            kShoulderMountainDistance,
+            peak,
+            shoulderMountainMaterial,
+            false);
+    }
 
-    DrawRightMountain(23.0f, -14.0f, 8.0f, 6.1f, farMountainMaterial, snowCapMaterial);
-    DrawRightMountain(23.0f, -5.5f, 7.5f, 7.0f, farMountainMaterial, snowCapMaterial);
-    DrawRightMountain(23.0f, 3.0f, 8.5f, 7.4f, farMountainMaterial, snowCapMaterial);
-    DrawRightMountain(23.0f, 12.0f, 7.0f, 5.9f, farMountainMaterial, snowCapMaterial);
+    for (const MountainPeakSpec& peak : kShoulderRightPeaks)
+    {
+        DrawMountainInstance(
+            MountainSide::Right,
+            kShoulderMountainDistance,
+            peak,
+            shoulderMountainMaterial,
+            false);
+    }
 
+    DrawFrontBackFoothill(
+        -kForegroundMountainDistance + 1.5f,
+        foothillMaterial);
+
+    DrawFrontBackFoothill(
+        kForegroundMountainDistance - 1.5f,
+        foothillMaterial);
+
+    DrawLeftRightFoothill(
+        -kForegroundMountainDistance + 1.5f,
+        foothillMaterial);
+
+    DrawLeftRightFoothill(
+        kForegroundMountainDistance - 1.5f,
+        foothillMaterial);
     // ============================================================
-    // Middle mountain layer
-    // Slightly closer and stronger.
+    // Foreground main mountain layer
     // ============================================================
 
-    DrawFrontMountain(-10.0f, 18.0f, 6.0f, 6.9f, midMountainMaterial, snowCapMaterial);
-    DrawFrontMountain(-2.8f, 18.0f, 6.8f, 8.1f, midMountainMaterial, snowCapMaterial);
-    DrawFrontMountain(5.0f, 18.0f, 7.0f, 7.6f, midMountainMaterial, snowCapMaterial);
-    DrawFrontMountain(12.5f, 18.0f, 5.8f, 6.6f, midMountainMaterial, snowCapMaterial);
+    for (const MountainPeakSpec& peak : kFrontPeaks)
+    {
+        DrawMountainInstance(
+            MountainSide::Front,
+            kForegroundMountainDistance,
+            peak,
+            midMountainMaterial,
+            true);
+    }
 
-    DrawBackMountain(-11.0f, -18.0f, 6.0f, 6.5f, midMountainMaterial, snowCapMaterial);
-    DrawBackMountain(-3.5f, -18.0f, 7.0f, 7.8f, midMountainMaterial, snowCapMaterial);
-    DrawBackMountain(4.5f, -18.0f, 6.7f, 7.2f, midMountainMaterial, snowCapMaterial);
-    DrawBackMountain(12.0f, -18.0f, 5.8f, 6.3f, midMountainMaterial, snowCapMaterial);
+    for (const MountainPeakSpec& peak : kBackPeaks)
+    {
+        DrawMountainInstance(
+            MountainSide::Back,
+            kForegroundMountainDistance,
+            peak,
+            farMountainMaterial,
+            true);
+    }
 
-    DrawLeftMountain(-18.0f, -10.0f, 6.2f, 6.8f, midMountainMaterial, snowCapMaterial);
-    DrawLeftMountain(-18.0f, -2.5f, 7.0f, 7.9f, midMountainMaterial, snowCapMaterial);
-    DrawLeftMountain(-18.0f, 5.5f, 6.5f, 7.1f, midMountainMaterial, snowCapMaterial);
-    DrawLeftMountain(-18.0f, 12.0f, 5.5f, 6.1f, midMountainMaterial, snowCapMaterial);
+    for (const MountainPeakSpec& peak : kLeftPeaks)
+    {
+        DrawMountainInstance(
+            MountainSide::Left,
+            kForegroundMountainDistance,
+            peak,
+            farMountainMaterial,
+            true);
+    }
 
-    DrawRightMountain(18.0f, -10.5f, 6.0f, 6.6f, midMountainMaterial, snowCapMaterial);
-    DrawRightMountain(18.0f, -3.0f, 7.0f, 8.0f, midMountainMaterial, snowCapMaterial);
-    DrawRightMountain(18.0f, 5.0f, 6.5f, 7.2f, midMountainMaterial, snowCapMaterial);
-    DrawRightMountain(18.0f, 12.0f, 5.8f, 6.2f, midMountainMaterial, snowCapMaterial);
+    for (const MountainPeakSpec& peak : kRightPeaks)
+    {
+        DrawMountainInstance(
+            MountainSide::Right,
+            kForegroundMountainDistance,
+            peak,
+            farMountainMaterial,
+            true);
+    }
+    mApp->mRenderer.SetAlphaBlendingEnabled(true);
 
-    // ============================================================
-    // Near dark cliff pieces
-    // These make the ring feel deeper and less flat.
-    // ============================================================
+    // Mist between foreground and background mountain layers.
+    DrawFrontBackMistBand(
+        -kShoulderMountainDistance,
+        2.2f,
+        105.0f,
+        5.0f,
+        0.18f);
 
-    DrawFrontMountain(-15.5f, 14.0f, 4.0f, 4.4f, nearMountainMaterial, snowCapMaterial);
-    DrawFrontMountain(15.5f, 14.0f, 4.0f, 4.2f, nearMountainMaterial, snowCapMaterial);
+    DrawFrontBackMistBand(
+        kShoulderMountainDistance,
+        2.2f,
+        105.0f,
+        5.0f,
+        0.18f);
 
-    DrawBackMountain(-15.0f, -14.0f, 4.0f, 4.2f, nearMountainMaterial, snowCapMaterial);
-    DrawBackMountain(15.0f, -14.0f, 4.0f, 4.3f, nearMountainMaterial, snowCapMaterial);
+    DrawLeftRightMistBand(
+        -kShoulderMountainDistance,
+        2.2f,
+        105.0f,
+        5.0f,
+        0.16f);
 
-    DrawLeftMountain(-14.0f, -15.0f, 4.0f, 4.3f, nearMountainMaterial, snowCapMaterial);
-    DrawLeftMountain(-14.0f, 15.0f, 4.0f, 4.1f, nearMountainMaterial, snowCapMaterial);
+    DrawLeftRightMistBand(
+        kShoulderMountainDistance,
+        2.2f,
+        105.0f,
+        5.0f,
+        0.16f);
 
-    DrawRightMountain(14.0f, -15.0f, 4.0f, 4.2f, nearMountainMaterial, snowCapMaterial);
-    DrawRightMountain(14.0f, 15.0f, 4.0f, 4.3f, nearMountainMaterial, snowCapMaterial);
+    // Lower heavier mist near the mountain base.
+    DrawFrontBackMistBand(
+        -kForegroundMountainDistance + 2.0f,
+        0.7f,
+        100.0f,
+        2.0f,
+        0.14f);
+
+    DrawFrontBackMistBand(
+        kForegroundMountainDistance - 2.0f,
+        0.7f,
+        100.0f,
+        2.0f,
+        0.14f);
+
+    DrawLeftRightMistBand(
+        -kForegroundMountainDistance + 2.0f,
+        0.7f,
+        100.0f,
+        2.0f,
+        0.12f);
+
+    DrawLeftRightMistBand(
+        kForegroundMountainDistance - 2.0f,
+        0.7f,
+        100.0f,
+        2.0f,
+        0.12f);
+
+    mApp->mRenderer.SetAlphaBlendingEnabled(false);
+    */
 }
 
 void WorldRenderer::DrawWaterfall(const XMMATRIX& viewProjection)

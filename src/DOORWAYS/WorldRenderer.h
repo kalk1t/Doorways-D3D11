@@ -31,7 +31,7 @@ public:
     void DrawPorchFloor(const XMMATRIX& viewProjection);
     void DrawPorchFence(const XMMATRIX& viewProjection);
 
-    void DrawMountainRing(const XMMATRIX& viewProjection);
+    void DrawMountains(const XMMATRIX& viewProjection);
     void DrawWaterfall(const XMMATRIX& viewProjection);
 
 

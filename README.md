@@ -48,32 +48,29 @@ The first version of the project will focus on simple geometry and clean structu
 - Visual Studio
 - Git / GitHub
 
-## Current Milestone
+## Current Development Update — Porch Environment Refocus
 
-## Milestone 13 — Textured Night Sky Foundation
+The project direction has been updated to focus first on building a stronger and more cinematic porch environment before expanding the rest of the world.
 
-Milestone 13 improves the porch night environment by replacing the old procedural star-field approach with a textured sky foundation. The goal was to make the sky feel fuller, cleaner, and more cinematic while keeping the Moon as a separate realistic focal object.
+The porch is no longer just a flat starting platform. It will be developed into a large terrace-style structure with:
 
-### Completed
+- a wide wooden/stone porch floor
+- high front stairs leading down into the future field area
+- a temple structure behind the porch
+- a temple entrance behind the player
+- a future grassy/rocky field at the bottom of the stairs
+- later connection back to the main door teleportation system
 
-- Added a dedicated night-sky texture asset for the porch environment.
-- Added renderer texture resources for the star sky:
-  - `mStarSkyTexture`
-  - `mStarSkySRV`
-- Cleaned up reusable texture naming:
-  - Moon texture renamed to Moon albedo naming.
-  - Moon glow texture renamed to reusable soft glow naming.
-- Loaded the star-sky texture through DirectXTK/WIC texture loading.
-- Updated `DrawNightSky()` to use the star-sky texture instead of a flat color or checker texture.
-- Kept the sky material emissive so the background sky is not affected by directional lighting.
-- Added separate UV offsets for front, back, left, right, and top sky panels so the same texture feels less obviously repeated.
-- Tuned the sky tint for a colder moonlit night mood.
-- Added subtle lower-horizon darkening to help the sky blend better with future mountains and terrain.
-- Removed the old procedural `DrawStars()` path as the main star-field renderer.
+This update prepares the renderer for a more focused environment-building phase.
 
+---
 
-### Result
+## Rendering Order Update
 
-The porch scene now has a full textured night sky with many stars, better color tone, less repetition across sky panels, and a darker horizon blend. The Moon remains a separate textured sphere with soft glow, while the sky texture now provides the main star-field background.
+`DrawScene()` now renders the world in this order:
 
-This gives the porch environment a much stronger nighttime atmosphere and prepares the scene for the next realism passes: mountain silhouettes, waterfall placement, porch fencing, and better environmental composition.
+```cpp
+DrawNightSky(viewProjection);
+DrawMoon(viewProjection);
+DrawPorchEnvironment(viewProjection);
+DrawPlayer(viewProjection);

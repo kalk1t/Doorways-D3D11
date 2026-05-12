@@ -682,8 +682,21 @@ bool Renderer::BuildGeometry()
         return false;
     if (!BuildSphereGeometry())
         return false;
+    if (!BuildMountainGeometry())
+    {
+        return false;
+    }
+	if (!BuildConstantBuffers())
+    {
+        return false;
+    }
 
 
+    return true;
+
+}
+
+bool Renderer::BuildConstantBuffers() {
 
     D3D11_BUFFER_DESC perObjectBufferDesc = {};
 
@@ -722,10 +735,6 @@ bool Renderer::BuildGeometry()
     {
         return false;
     }
-
-    return true;
-
-
 
     return true;
 }
@@ -999,6 +1008,127 @@ bool Renderer::BuildSphereGeometry() {
     return true;
 }
 
+bool Renderer::BuildMountainGeometry()
+{
+    // =====================================================
+    // Mountain peak mesh
+    // =====================================================
+    //
+    // Local shape:
+    // x = width direction
+    // y = height direction
+    // z = thickness direction
+    //
+    // This is a triangular prism:
+    // front triangle, back triangle, two sloped sides, and bottom.
+
+    Vertex mountainVertices[] =
+    {
+        // Front triangle, z = -0.5
+        { XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT3(0.0f, 0.0f, -1.0f), XMFLOAT2(0.0f, 1.0f) },
+        { XMFLOAT3(0.0f,  0.5f, -0.5f), XMFLOAT3(0.0f, 0.0f, -1.0f), XMFLOAT2(0.5f, 0.0f) },
+        { XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT3(0.0f, 0.0f, -1.0f), XMFLOAT2(1.0f, 1.0f) },
+
+        // Back triangle, z = +0.5
+        { XMFLOAT3(-0.5f, -0.5f,  0.5f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT2(0.0f, 1.0f) },
+        { XMFLOAT3(0.0f,  0.5f,  0.5f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT2(0.5f, 0.0f) },
+        { XMFLOAT3(0.5f, -0.5f,  0.5f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT2(1.0f, 1.0f) },
+
+        // Left sloped side
+        { XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT3(-0.70f, 0.70f, 0.0f), XMFLOAT2(0.0f, 1.0f) },
+        { XMFLOAT3(-0.5f, -0.5f,  0.5f), XMFLOAT3(-0.70f, 0.70f, 0.0f), XMFLOAT2(1.0f, 1.0f) },
+        { XMFLOAT3(0.0f,  0.5f,  0.5f), XMFLOAT3(-0.70f, 0.70f, 0.0f), XMFLOAT2(1.0f, 0.0f) },
+        { XMFLOAT3(0.0f,  0.5f, -0.5f), XMFLOAT3(-0.70f, 0.70f, 0.0f), XMFLOAT2(0.0f, 0.0f) },
+
+        // Right sloped side
+        { XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT3(0.70f, 0.70f, 0.0f), XMFLOAT2(0.0f, 1.0f) },
+        { XMFLOAT3(0.0f,  0.5f, -0.5f), XMFLOAT3(0.70f, 0.70f, 0.0f), XMFLOAT2(0.0f, 0.0f) },
+        { XMFLOAT3(0.0f,  0.5f,  0.5f), XMFLOAT3(0.70f, 0.70f, 0.0f), XMFLOAT2(1.0f, 0.0f) },
+        { XMFLOAT3(0.5f, -0.5f,  0.5f), XMFLOAT3(0.70f, 0.70f, 0.0f), XMFLOAT2(1.0f, 1.0f) },
+
+        // Bottom face
+        { XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT3(0.0f, -1.0f, 0.0f), XMFLOAT2(0.0f, 0.0f) },
+        { XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT3(0.0f, -1.0f, 0.0f), XMFLOAT2(1.0f, 0.0f) },
+        { XMFLOAT3(0.5f, -0.5f,  0.5f), XMFLOAT3(0.0f, -1.0f, 0.0f), XMFLOAT2(1.0f, 1.0f) },
+        { XMFLOAT3(-0.5f, -0.5f,  0.5f), XMFLOAT3(0.0f, -1.0f, 0.0f), XMFLOAT2(0.0f, 1.0f) },
+    };
+
+    unsigned short mountainIndices[] =
+    {
+        // Front triangle
+        0, 1, 2,
+
+        // Back triangle
+        3, 5, 4,
+
+        // Left sloped side
+        6, 7, 8,
+        6, 8, 9,
+
+        // Right sloped side
+        10, 11, 12,
+        10, 12, 13,
+
+        // Bottom
+        14, 15, 16,
+        14, 16, 17
+    };
+
+    mMountainIndexCount =
+        static_cast<UINT>(sizeof(mountainIndices) / sizeof(mountainIndices[0]));
+
+    D3D11_BUFFER_DESC mountainVertexBufferDesc = {};
+
+    mountainVertexBufferDesc.ByteWidth = sizeof(mountainVertices);
+    mountainVertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+    mountainVertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    mountainVertexBufferDesc.CPUAccessFlags = 0;
+    mountainVertexBufferDesc.MiscFlags = 0;
+    mountainVertexBufferDesc.StructureByteStride = 0;
+
+    D3D11_SUBRESOURCE_DATA mountainVertexInitData = {};
+
+    mountainVertexInitData.pSysMem = mountainVertices;
+    mountainVertexInitData.SysMemPitch = 0;
+    mountainVertexInitData.SysMemSlicePitch = 0;
+
+    HRESULT hr = mDevice->CreateBuffer(
+        &mountainVertexBufferDesc,
+        &mountainVertexInitData,
+        mMountainVertexBuffer.GetAddressOf());
+
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    D3D11_BUFFER_DESC mountainIndexBufferDesc = {};
+
+    mountainIndexBufferDesc.ByteWidth = sizeof(mountainIndices);
+    mountainIndexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+    mountainIndexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+    mountainIndexBufferDesc.CPUAccessFlags = 0;
+    mountainIndexBufferDesc.MiscFlags = 0;
+    mountainIndexBufferDesc.StructureByteStride = 0;
+
+    D3D11_SUBRESOURCE_DATA mountainIndexInitData = {};
+
+    mountainIndexInitData.pSysMem = mountainIndices;
+    mountainIndexInitData.SysMemPitch = 0;
+    mountainIndexInitData.SysMemSlicePitch = 0;
+
+    hr = mDevice->CreateBuffer(
+        &mountainIndexBufferDesc,
+        &mountainIndexInitData,
+        mMountainIndexBuffer.GetAddressOf());
+
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    return true;
+}
 
 bool CreateMoonGlowTexture(
     ID3D11Device* device,
@@ -1175,7 +1305,7 @@ bool Renderer::BuildTextures()
 	//mMoonTextureView receives the shader resource view
     //that is important because the pixel shader read textures through shader resource view
 	hr = CreateWICTextureFromFile(mDevice.Get(),
-        L"..\\..\\assets\\textures\\night\\moon_color_2k.jpg",
+        L"..\\..\\assets\\textures\\night\\moon_color.jpg",
         reinterpret_cast<ID3D11Resource**>(mMoonTexture.GetAddressOf()),
         mMoonSRV.GetAddressOf());
     if (FAILED(hr))
@@ -1193,7 +1323,14 @@ bool Renderer::BuildTextures()
         return false;
     }
 
-
+    hr = CreateWICTextureFromFile(mDevice.Get(),
+        L"..\\..\\assets\\textures\\night\\mountain_rock.jpg",
+        reinterpret_cast<ID3D11Resource**>(mMountainTexture.GetAddressOf()),
+        mMountainSRV.GetAddressOf());
+    if (FAILED(hr))
+    {
+        return false;
+    }
 
 
     if (!CreateMoonGlowTexture(
@@ -1203,6 +1340,99 @@ bool Renderer::BuildTextures()
     {
         return false;
     }
+
+    // =====================================================
+// Procedural mountain rock texture
+// =====================================================
+    constexpr UINT mountainTextureWidth = 16;
+    constexpr UINT mountainTextureHeight = 16;
+
+    std::uint8_t mountainPixels
+        [mountainTextureWidth * mountainTextureHeight * bytesPerPixel] = {};
+
+    for (UINT y = 0; y < mountainTextureHeight; ++y)
+    {
+        for (UINT x = 0; x < mountainTextureWidth; ++x)
+        {
+            UINT pixelIndex =
+                (y * mountainTextureWidth + x) * bytesPerPixel;
+
+            // Simple deterministic noise.
+            // This creates uneven rock color without loading an image file.
+            UINT noise =
+                (x * 37u + y * 17u + x * y * 11u) % 45u;
+
+            // Dark blue-gray mountain base.
+            std::uint8_t r = static_cast<std::uint8_t>(45u + noise);
+            std::uint8_t g = static_cast<std::uint8_t>(50u + noise);
+            std::uint8_t b = static_cast<std::uint8_t>(65u + noise);
+
+            // Add some colder bright streaks.
+            if (((x + y) % 7u) == 0u)
+            {
+                r = static_cast<std::uint8_t>(r + 25u);
+                g = static_cast<std::uint8_t>(g + 25u);
+                b = static_cast<std::uint8_t>(b + 30u);
+            }
+
+            mountainPixels[pixelIndex + 0] = r;
+            mountainPixels[pixelIndex + 1] = g;
+            mountainPixels[pixelIndex + 2] = b;
+            mountainPixels[pixelIndex + 3] = 255;
+        }
+    }
+
+    D3D11_TEXTURE2D_DESC mountainTextureDesc = {};
+
+    mountainTextureDesc.Width = mountainTextureWidth;
+    mountainTextureDesc.Height = mountainTextureHeight;
+    mountainTextureDesc.MipLevels = 1;
+    mountainTextureDesc.ArraySize = 1;
+    mountainTextureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+
+    mountainTextureDesc.SampleDesc.Count = 1;
+    mountainTextureDesc.SampleDesc.Quality = 0;
+
+    mountainTextureDesc.Usage = D3D11_USAGE_IMMUTABLE;
+    mountainTextureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    mountainTextureDesc.CPUAccessFlags = 0;
+    mountainTextureDesc.MiscFlags = 0;
+
+    D3D11_SUBRESOURCE_DATA mountainTextureInitData = {};
+
+    mountainTextureInitData.pSysMem = mountainPixels;
+    mountainTextureInitData.SysMemPitch =
+        mountainTextureWidth * bytesPerPixel;
+    mountainTextureInitData.SysMemSlicePitch = 0;
+
+    hr = mDevice->CreateTexture2D(
+        &mountainTextureDesc,
+        &mountainTextureInitData,
+        mMountainTexture.GetAddressOf());
+
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC mountainSrvDesc = {};
+
+    mountainSrvDesc.Format = mountainTextureDesc.Format;
+    mountainSrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    mountainSrvDesc.Texture2D.MostDetailedMip = 0;
+    mountainSrvDesc.Texture2D.MipLevels = 1;
+
+    hr = mDevice->CreateShaderResourceView(
+        mMountainTexture.Get(),
+        &mountainSrvDesc,
+        mMountainSRV.GetAddressOf());
+
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+
 
     if (!CreateTextLabelTexture(
         mDevice.Get(),
@@ -1585,6 +1815,79 @@ void Renderer::DrawDoorLabel(
     DrawBox(world, viewProjection, material);
 }
 
+void Renderer::DrawMountainPeak(
+    const XMMATRIX& world,
+    const XMMATRIX& viewProjection,
+    const Material& material)
+{
+    UINT stride = sizeof(Vertex);
+    UINT offset = 0;
+
+    ID3D11Buffer* vertexBuffers[] =
+    {
+        mMountainVertexBuffer.Get()
+    };
+
+    mImmediateContext->IASetVertexBuffers(
+        0,
+        1,
+        vertexBuffers,
+        &stride,
+        &offset);
+
+    mImmediateContext->IASetIndexBuffer(
+        mMountainIndexBuffer.Get(),
+        DXGI_FORMAT_R16_UINT,
+        0);
+
+    mImmediateContext->IASetPrimitiveTopology(
+        D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    PerObjectConstantBuffer perObjectData = {};
+
+    XMMATRIX worldViewProjection = world * viewProjection;
+
+    XMMATRIX worldInverseTranspose =
+        XMMatrixTranspose(XMMatrixInverse(nullptr, world));
+
+    XMStoreFloat4x4(
+        &perObjectData.WorldViewProj,
+        worldViewProjection);
+
+    XMStoreFloat4x4(
+        &perObjectData.World,
+        world);
+
+    XMStoreFloat4x4(
+        &perObjectData.WorldInvTranspose,
+        worldInverseTranspose);
+
+    perObjectData.MaterialDiffuse = material.Diffuse;
+    perObjectData.TexTransform = material.TexTransform;
+
+    mImmediateContext->UpdateSubresource(
+        mPerObjectConstantBuffer.Get(),
+        0,
+        nullptr,
+        &perObjectData,
+        0,
+        0);
+
+    ID3D11ShaderResourceView* shaderResources[] =
+    {
+        material.DiffuseMap
+    };
+
+    mImmediateContext->PSSetShaderResources(
+        0,
+        1,
+        shaderResources);
+
+    mImmediateContext->DrawIndexed(
+        mMountainIndexCount,
+        0,
+        0);
+}
 
 void Renderer::Present()
 {

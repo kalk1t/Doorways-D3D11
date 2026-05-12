@@ -6,6 +6,8 @@ using namespace DirectX;
 
 XMMATRIX Camera::BuildViewProjectionMatrix(float aspectRatio) const
 {
+
+
     XMVECTOR cameraPosition = XMLoadFloat3(&Position);
 
     float cosYaw = cosf(Yaw);
@@ -32,12 +34,15 @@ XMMATRIX Camera::BuildViewProjectionMatrix(float aspectRatio) const
         cameraTarget,
         upDirection);
 
+    constexpr float fieldOfViewY = 0.25f * XM_PI;
+    constexpr float nearPlane = 0.1f;
+    constexpr float farPlane = 200.0f;
 
     XMMATRIX projection = XMMatrixPerspectiveFovLH(
-        0.25f * XM_PI,
+        fieldOfViewY,
         aspectRatio,
-        0.1f,
-        100.0f);
+        nearPlane,
+        farPlane);
 
     return view * projection;
 }

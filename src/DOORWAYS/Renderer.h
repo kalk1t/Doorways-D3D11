@@ -38,6 +38,11 @@ public:
         const XMMATRIX& viewProjection,
         const Material& material);
 
+    void DrawMountainPeak(
+        const XMMATRIX& world,
+        const XMMATRIX& viewProjection,
+        const Material& material);
+
     void DrawSphere(
         const XMMATRIX& world,
         const XMMATRIX& viewProjection,
@@ -46,8 +51,10 @@ public:
 
     bool BuildShaders();
 	bool BuildGeometry();
+    bool BuildConstantBuffers();
     bool BuildBoxGeometry();
     bool BuildSphereGeometry();
+	bool BuildMountainGeometry();
 
 	bool BuildSamplerState();
 	bool BuildTextures();
@@ -74,7 +81,13 @@ public:
     Microsoft::WRL::ComPtr<ID3D11Buffer> mSphereVertexBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer> mSphereIndexBuffer;
 
+    Microsoft::WRL::ComPtr<ID3D11Buffer> mMountainVertexBuffer;
+    Microsoft::WRL::ComPtr<ID3D11Buffer> mMountainIndexBuffer;
 
+
+    UINT mBoxIndexCount = 0;
+    UINT mSphereIndexCount = 0;
+    UINT mMountainIndexCount = 0;
 
     Microsoft::WRL::ComPtr<ID3D11Buffer> mPerObjectConstantBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer> mPerFrameConstantBuffer;
@@ -115,8 +128,8 @@ public:
     Microsoft::WRL::ComPtr<ID3D11Texture2D> mStarSkyTexture;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> mStarSkySRV;
 
+    //mountain
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> mMountainTexture;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> mMountainSRV;
 
-
-    UINT mBoxIndexCount = 0;
-    UINT mSphereIndexCount = 0;
 };

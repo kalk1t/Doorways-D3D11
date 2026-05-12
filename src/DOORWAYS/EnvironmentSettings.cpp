@@ -41,7 +41,7 @@ EnvironmentSettings GetEnvironmentSettings(
         settings.Lighting.LightDirection =
             XMFLOAT4(-0.35f, -0.78f, 0.28f, 0.0f);
 
-#if 1
+#if 0
         settings.Lighting.LightColor =
             XMFLOAT4(moonStrength * 0.72f,moonStrength * 0.82f,moonStrength,1.0f);
 

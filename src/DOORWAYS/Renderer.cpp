@@ -297,7 +297,75 @@ bool CreateTextLabelTexture(
     return true;
 }
 
+bool CreateSolidColorTexture(
+    ID3D11Device* device,
+    std::uint8_t r,
+    std::uint8_t g,
+    std::uint8_t b,
+    std::uint8_t a,
+    ID3D11Texture2D** outTexture,
+    ID3D11ShaderResourceView** outTextureView)
+{
+    constexpr UINT textureWidth = 1;
+    constexpr UINT textureHeight = 1;
+    constexpr UINT bytesPerPixel = 4;
 
+    std::uint8_t pixels[4] =
+    {
+        r, g, b, a
+    };
+
+    D3D11_TEXTURE2D_DESC textureDesc = {};
+
+    textureDesc.Width = textureWidth;
+    textureDesc.Height = textureHeight;
+    textureDesc.MipLevels = 1;
+    textureDesc.ArraySize = 1;
+    textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+
+    textureDesc.SampleDesc.Count = 1;
+    textureDesc.SampleDesc.Quality = 0;
+
+    textureDesc.Usage = D3D11_USAGE_IMMUTABLE;
+    textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    textureDesc.CPUAccessFlags = 0;
+    textureDesc.MiscFlags = 0;
+
+    D3D11_SUBRESOURCE_DATA textureInitData = {};
+
+    textureInitData.pSysMem = pixels;
+    textureInitData.SysMemPitch = textureWidth * bytesPerPixel;
+    textureInitData.SysMemSlicePitch = 0;
+
+    HRESULT hr = device->CreateTexture2D(
+        &textureDesc,
+        &textureInitData,
+        outTexture);
+
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+
+    srvDesc.Format = textureDesc.Format;
+    srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    srvDesc.Texture2D.MostDetailedMip = 0;
+    srvDesc.Texture2D.MipLevels = 1;
+
+    hr = device->CreateShaderResourceView(
+        *outTexture,
+        &srvDesc,
+        outTextureView);
+
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    return true;
+}
 
 bool Renderer::Initialize(
     HWND mMainWindow, int mClientWidth, int mClientHeight)
@@ -1102,32 +1170,36 @@ bool Renderer::BuildTextures()
     }
 
 
-    //moontexture
-	Microsoft::WRL::ComPtr<ID3D11Resource> moonTextureResource;
-
     //loads the JPH file from disk and create a GPU texture
     //moonTextureResource receives the generic Direct3D resource
 	//mMoonTextureView receives the shader resource view
     //that is important because the pixel shader read textures through shader resource view
 	hr = CreateWICTextureFromFile(mDevice.Get(),
-        L"..\\..\\assets\\textures\\moon\\moon_color_2k.jpg",
-        moonTextureResource.GetAddressOf(), mMoonTextureView.GetAddressOf());
+        L"..\\..\\assets\\textures\\night\\moon_color_2k.jpg",
+        reinterpret_cast<ID3D11Resource**>(mMoonTexture.GetAddressOf()),
+        mMoonSRV.GetAddressOf());
+    if (FAILED(hr))
+    {
+        return false;
+    }
+    
+
+    hr = CreateWICTextureFromFile(mDevice.Get(),
+        L"..\\..\\assets\\textures\\night\\star_sky.jpg",
+        reinterpret_cast<ID3D11Resource**>(mStarSkyTexture.GetAddressOf()),
+        mStarSkySRV.GetAddressOf());
     if (FAILED(hr))
     {
         return false;
     }
 
-	//converts the generic resource into ID3D11Texture2D
-    hr = moonTextureResource.As(&mMoonTexture);
-    if (FAILED(hr))
-    {
-        return false;
-    }
+
+
 
     if (!CreateMoonGlowTexture(
         mDevice.Get(),
-        mMoonGlowTexture.GetAddressOf(),
-        mMoonGlowTextureView.GetAddressOf()))
+        mSoftGlowTexture.GetAddressOf(),
+        mSoftGlowSRV.GetAddressOf()))
     {
         return false;
     }
@@ -1165,6 +1237,17 @@ bool Renderer::BuildTextures()
         return false;
     }
 
+    if (!CreateSolidColorTexture(
+        mDevice.Get(),
+        255,
+        255,
+        255,
+        255,
+        mWhiteTexture.GetAddressOf(),
+        mWhiteTextureView.GetAddressOf()))
+    {
+        return false;
+    }
 
     return true;
 }

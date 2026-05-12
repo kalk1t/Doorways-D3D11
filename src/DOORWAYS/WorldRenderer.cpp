@@ -38,8 +38,7 @@ WorldRenderer::WorldRenderer(App* app)
 
 void WorldRenderer::DrawPorchEnvironment(const XMMATRIX& viewProjection)
 {
-    //DrawNightSky(viewProjection);
-    //DrawStars(viewProjection);
+    DrawNightSky(viewProjection);
     DrawMoon(viewProjection);
 
     //DrawMountainRing(viewProjection);
@@ -51,15 +50,47 @@ void WorldRenderer::DrawPorchEnvironment(const XMMATRIX& viewProjection)
 
 void WorldRenderer::DrawNightSky(const XMMATRIX& viewProjection)
 {
-    Material skyMaterial =
+    const XMFLOAT4 skyTint =
+        XMFLOAT4(1.10f, 1.14f, 1.28f, 1.0f);
+
+    Material frontSkyMaterial =
     {
-        // Deep blue night sky.
-        XMFLOAT4(0.935f, 0.050f, 0.130f, 1.0f),
+        skyTint,
+        XMFLOAT4(1.0f, 1.0f, 0.00f, 0.00f),
+        mApp->mRenderer.mStarSkySRV.Get(),
+        1.0f
+    };
 
-        // Keep texture stretch low so the checker is not repeated heavily.
-        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+    Material backSkyMaterial =
+    {
+        skyTint,
+        XMFLOAT4(1.0f, 1.0f, 0.35f, 0.10f),
+        mApp->mRenderer.mStarSkySRV.Get(),
+        1.0f
+    };
 
-        mApp->mRenderer.mDiffuseTextureView.Get()
+    Material leftSkyMaterial =
+    {
+        skyTint,
+        XMFLOAT4(1.0f, 1.0f, 0.70f, 0.20f),
+        mApp->mRenderer.mStarSkySRV.Get(),
+        1.0f
+    };
+
+    Material rightSkyMaterial =
+    {
+        skyTint,
+        XMFLOAT4(1.0f, 1.0f, 0.15f, 0.35f),
+        mApp->mRenderer.mStarSkySRV.Get(),
+        1.0f
+    };
+
+    Material topSkyMaterial =
+    {
+        skyTint,
+        XMFLOAT4(1.25f, 1.25f, 0.25f, 0.15f),
+        mApp->mRenderer.mStarSkySRV.Get(),
+        1.0f
     };
 
     constexpr float skyDistance = 28.0f;
@@ -79,7 +110,7 @@ void WorldRenderer::DrawNightSky(const XMMATRIX& viewProjection)
     mApp->mRenderer.DrawBox(
         frontSkyWorld,
         viewProjection,
-        skyMaterial);
+        frontSkyMaterial);
 
     // Back sky wall.
     XMMATRIX backSkyWorld = MakeWorld(
@@ -93,7 +124,7 @@ void WorldRenderer::DrawNightSky(const XMMATRIX& viewProjection)
     mApp->mRenderer.DrawBox(
         backSkyWorld,
         viewProjection,
-        skyMaterial);
+        backSkyMaterial);
 
     // Left sky wall.
     XMMATRIX leftSkyWorld = MakeWorld(
@@ -107,7 +138,7 @@ void WorldRenderer::DrawNightSky(const XMMATRIX& viewProjection)
     mApp->mRenderer.DrawBox(
         leftSkyWorld,
         viewProjection,
-        skyMaterial);
+        leftSkyMaterial);
 
     // Right sky wall.
     XMMATRIX rightSkyWorld = MakeWorld(
@@ -121,7 +152,7 @@ void WorldRenderer::DrawNightSky(const XMMATRIX& viewProjection)
     mApp->mRenderer.DrawBox(
         rightSkyWorld,
         viewProjection,
-        skyMaterial);
+        rightSkyMaterial);
 
     // Top sky ceiling.
     XMMATRIX topSkyWorld = MakeWorld(
@@ -135,7 +166,84 @@ void WorldRenderer::DrawNightSky(const XMMATRIX& viewProjection)
     mApp->mRenderer.DrawBox(
         topSkyWorld,
         viewProjection,
-        skyMaterial);
+        topSkyMaterial);
+
+
+
+    // ------------------------------------------------------------
+    // Subtle horizon darkening.
+    // This helps the lower sky blend with future mountains/terrain.
+    // ------------------------------------------------------------
+
+    Material horizonDarkMaterial =
+    {
+        XMFLOAT4(0.005f, 0.008f, 0.020f, 0.42f),
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+        mApp->mRenderer.mWhiteTextureView.Get(),
+        1.0f
+    };
+
+    mApp->mRenderer.SetAlphaBlendingEnabled(true);
+
+    // Front lower sky darkening.
+    XMMATRIX frontHorizonWorld = MakeWorld(
+        skyPanelSize,
+        5.0f,
+        0.06f,
+        0.0f,
+        0.2f,
+        skyDistance - 0.08f);
+
+    mApp->mRenderer.DrawBox(
+        frontHorizonWorld,
+        viewProjection,
+        horizonDarkMaterial);
+
+    // Back lower sky darkening.
+    XMMATRIX backHorizonWorld = MakeWorld(
+        skyPanelSize,
+        5.0f,
+        0.06f,
+        0.0f,
+        0.2f,
+        -skyDistance + 0.08f);
+
+    mApp->mRenderer.DrawBox(
+        backHorizonWorld,
+        viewProjection,
+        horizonDarkMaterial);
+
+    // Left lower sky darkening.
+    XMMATRIX leftHorizonWorld = MakeWorld(
+        0.06f,
+        5.0f,
+        skyPanelSize,
+        -skyDistance + 0.08f,
+        0.2f,
+        0.0f);
+
+    mApp->mRenderer.DrawBox(
+        leftHorizonWorld,
+        viewProjection,
+        horizonDarkMaterial);
+
+    // Right lower sky darkening.
+    XMMATRIX rightHorizonWorld = MakeWorld(
+        0.06f,
+        5.0f,
+        skyPanelSize,
+        skyDistance - 0.08f,
+        0.2f,
+        0.0f);
+
+    mApp->mRenderer.DrawBox(
+        rightHorizonWorld,
+        viewProjection,
+        horizonDarkMaterial);
+
+    mApp->mRenderer.SetAlphaBlendingEnabled(false);
+
+
 }
 
 void WorldRenderer::DrawMoon(const XMMATRIX& viewProjection)
@@ -152,7 +260,7 @@ void WorldRenderer::DrawMoon(const XMMATRIX& viewProjection)
 
         XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
 
-        mApp->mRenderer.mMoonTextureView.Get(),
+        mApp->mRenderer.mMoonSRV.Get(),
 
         0.81f
     };
@@ -167,7 +275,7 @@ void WorldRenderer::DrawMoon(const XMMATRIX& viewProjection)
 
         XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
 
-        mApp->mRenderer.mMoonGlowTextureView.Get(),
+        mApp->mRenderer.mSoftGlowSRV.Get(),
 
         1.0f
     };
@@ -210,192 +318,6 @@ void WorldRenderer::DrawMoon(const XMMATRIX& viewProjection)
         moonGlowMaterial);
 
     mApp->mRenderer.SetAlphaBlendingEnabled(false);
-}
-
-void WorldRenderer::DrawStars(const XMMATRIX& viewProjection)
-{
-    float twinkle =
-        0.5f + 0.5f * sinf(mApp->mWorld.EnvironmentTime * 1.35f);
-
-    Material smallStarMaterial =
-    {
-        XMFLOAT4(
-            1.70f + twinkle * 0.20f,
-            1.80f + twinkle * 0.20f,
-            2.20f + twinkle * 0.25f,
-            1.0f),
-
-        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
-
-        mApp->mRenderer.mDiffuseTextureView.Get()
-    };
-
-    Material brightStarMaterial =
-    {
-        XMFLOAT4(
-            2.70f + twinkle * 0.35f,
-            2.85f + twinkle * 0.35f,
-            3.30f + twinkle * 0.45f,
-            1.0f),
-
-        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
-
-        mApp->mRenderer.mDiffuseTextureView.Get()
-    };
-
-    constexpr float frontZ = 27.45f;
-    constexpr float backZ = -27.45f;
-    constexpr float leftX = -27.45f;
-    constexpr float rightX = 27.45f;
-    constexpr float topY = 15.25f;
-
-    auto DrawFrontStar =
-        [this, &viewProjection, &smallStarMaterial, &brightStarMaterial](
-            float x,
-            float y,
-            float size,
-            bool bright)
-        {
-            XMMATRIX starWorld = MakeWorld(
-                size,
-                size,
-                0.06f,
-                x,
-                y,
-                27.35f);
-
-            mApp->mRenderer.DrawBox(
-                starWorld,
-                viewProjection,
-                bright ? brightStarMaterial : smallStarMaterial);
-        };
-
-    auto DrawBackStar =
-        [this, &viewProjection, &smallStarMaterial, &brightStarMaterial](
-            float x,
-            float y,
-            float size,
-            bool bright)
-        {
-            XMMATRIX starWorld = MakeWorld(
-                size,
-                size,
-                0.06f,
-                x,
-                y,
-                -27.35f);
-
-            mApp->mRenderer.DrawBox(
-                starWorld,
-                viewProjection,
-                bright ? brightStarMaterial : smallStarMaterial);
-        };
-
-    auto DrawLeftStar =
-        [this, &viewProjection, &smallStarMaterial, &brightStarMaterial](
-            float z,
-            float y,
-            float size,
-            bool bright)
-        {
-            XMMATRIX starWorld = MakeWorld(
-                0.06f,
-                size,
-                size,
-                -27.35f,
-                y,
-                z);
-
-            mApp->mRenderer.DrawBox(
-                starWorld,
-                viewProjection,
-                bright ? brightStarMaterial : smallStarMaterial);
-        };
-
-    auto DrawRightStar =
-        [this, &viewProjection, &smallStarMaterial, &brightStarMaterial](
-            float z,
-            float y,
-            float size,
-            bool bright)
-        {
-            XMMATRIX starWorld = MakeWorld(
-                0.06f,
-                size,
-                size,
-                27.35f,
-                y,
-                z);
-
-            mApp->mRenderer.DrawBox(
-                starWorld,
-                viewProjection,
-                bright ? brightStarMaterial : smallStarMaterial);
-        };
-
-    auto DrawTopStar =
-        [this, &viewProjection, &smallStarMaterial, &brightStarMaterial](
-            float x,
-            float z,
-            float size,
-            bool bright)
-        {
-            XMMATRIX starWorld = MakeWorld(
-                size,
-                0.06f,
-                size,
-                x,
-                15.20f,
-                z);
-
-            mApp->mRenderer.DrawBox(
-                starWorld,
-                viewProjection,
-                bright ? brightStarMaterial : smallStarMaterial);
-        };
-
-    // Front sky stars.
-    DrawFrontStar(-10.5f, 10.8f, 0.09f, false);
-    DrawFrontStar(-7.2f, 13.2f, 0.13f, true);
-    DrawFrontStar(-4.0f, 9.4f, 0.08f, false);
-    DrawFrontStar(-1.5f, 12.5f, 0.10f, false);
-    DrawFrontStar(2.0f, 10.2f, 0.12f, true);
-    DrawFrontStar(5.5f, 13.8f, 0.08f, false);
-    DrawFrontStar(10.0f, 9.8f, 0.11f, false);
-
-    // Back sky stars.
-    DrawBackStar(-11.0f, 11.6f, 0.10f, false);
-    DrawBackStar(-8.0f, 9.6f, 0.08f, false);
-    DrawBackStar(-3.5f, 13.5f, 0.12f, true);
-    DrawBackStar(0.8f, 10.7f, 0.09f, false);
-    DrawBackStar(4.2f, 12.8f, 0.08f, false);
-    DrawBackStar(8.5f, 9.9f, 0.13f, true);
-    DrawBackStar(11.5f, 13.4f, 0.09f, false);
-
-    // Left sky stars.
-    DrawLeftStar(-12.0f, 10.2f, 0.09f, false);
-    DrawLeftStar(-8.5f, 13.1f, 0.11f, true);
-    DrawLeftStar(-4.0f, 11.4f, 0.08f, false);
-    DrawLeftStar(1.5f, 13.7f, 0.10f, false);
-    DrawLeftStar(6.0f, 10.6f, 0.12f, true);
-    DrawLeftStar(11.0f, 12.4f, 0.08f, false);
-
-    // Right sky stars.
-    DrawRightStar(-11.5f, 12.2f, 0.10f, false);
-    DrawRightStar(-6.0f, 10.4f, 0.08f, false);
-    DrawRightStar(-2.0f, 13.4f, 0.12f, true);
-    DrawRightStar(3.5f, 11.2f, 0.09f, false);
-    DrawRightStar(7.5f, 13.8f, 0.10f, false);
-    DrawRightStar(12.0f, 10.0f, 0.13f, true);
-
-    // Overhead stars.
-    DrawTopStar(-12.0f, -12.0f, 0.10f, false);
-    DrawTopStar(-8.0f, -3.0f, 0.13f, true);
-    DrawTopStar(-4.5f, 8.0f, 0.08f, false);
-    DrawTopStar(0.5f, -9.5f, 0.09f, false);
-    DrawTopStar(4.5f, 2.5f, 0.12f, true);
-    DrawTopStar(9.0f, -5.0f, 0.08f, false);
-    DrawTopStar(12.5f, 9.5f, 0.11f, false);
 }
 
 void WorldRenderer::DrawPorchFloor(const XMMATRIX& viewProjection)
@@ -1474,7 +1396,6 @@ void WorldRenderer::DrawScene(const XMMATRIX& viewProjection)
 
 
 }
-
 
 void WorldRenderer::DrawPlayer(const XMMATRIX& viewProjection)
 {

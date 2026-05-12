@@ -79,6 +79,8 @@ public:
     Microsoft::WRL::ComPtr<ID3D11Buffer> mPerObjectConstantBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer> mPerFrameConstantBuffer;
 
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> mWhiteTexture;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> mWhiteTextureView;
 
     Microsoft::WRL::ComPtr<ID3D11Texture2D> mDiffuseTexture;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> mDiffuseTextureView;
@@ -95,10 +97,23 @@ public:
     Microsoft::WRL::ComPtr<ID3D11SamplerState> mSamplerState;
 
 	//Textures for .jpg loading
+    //
+    //
+    //SRV - Shader Resource View
+    // 
+    // 
+    
+	//soft glow
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> mSoftGlowTexture;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> mSoftGlowSRV;
+
+    //moon
     Microsoft::WRL::ComPtr<ID3D11Texture2D> mMoonTexture;
-    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> mMoonTextureView;
-    Microsoft::WRL::ComPtr<ID3D11Texture2D> mMoonGlowTexture;
-    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> mMoonGlowTextureView;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> mMoonSRV;
+
+    //night sky
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> mStarSkyTexture;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> mStarSkySRV;
 
 
 

@@ -47,30 +47,25 @@ The first version of the project will focus on simple geometry and clean structu
 - HLSL
 - Visual Studio
 - Git / GitHub
+## Current Milestone Update — Porch / Temple / Stair Environment Lock
 
-## Current Development Update — Porch Environment Refocus
+The project has reached a new environment milestone focused on building the main porch composition.
 
-The project direction has been updated to focus first on building a stronger and more cinematic porch environment before expanding the rest of the world.
+The current scene now has a complete readable world layout:
 
-The porch is no longer just a flat starting platform. It will be developed into a large terrace-style structure with:
+```text
+                -Z direction
 
-- a wide wooden/stone porch floor
-- high front stairs leading down into the future field area
-- a temple structure behind the porch
-- a temple entrance behind the player
-- a future grassy/rocky field at the bottom of the stairs
-- later connection back to the main door teleportation system
+              [ Raised Temple Area ]
+              [ 9 Stairs Up ]
+              [ Temple Entrance Depth ]
+              [ Temple Front Wall ]
+              [ Temple Threshold ]
 
-This update prepares the renderer for a more focused environment-building phase.
+              [ Porch Terrace ]
 
----
+              [ Stair Landing ]
+              [ 21 Stairs Down ]
+              [ Rocky / Grassy Field ]
 
-## Rendering Order Update
-
-`DrawScene()` now renders the world in this order:
-
-```cpp
-DrawNightSky(viewProjection);
-DrawMoon(viewProjection);
-DrawPorchEnvironment(viewProjection);
-DrawPlayer(viewProjection);
+                +Z direction

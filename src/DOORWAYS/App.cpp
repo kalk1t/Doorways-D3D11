@@ -354,34 +354,9 @@ void App::Update(float deltaTime)
         XMStoreFloat3(&mWorld.MainPlayer.Position, currentPosition);
     }
 
-
-    constexpr float porchMinX = -2.35f;
-    constexpr float porchMaxX = 2.35f;
-    constexpr float porchMinZ = -1.85f;
-    constexpr float porchMaxZ = 1.85f;
-
-    if (mWorld.MainPlayer.Position.x < porchMinX)
-    {
-        mWorld.MainPlayer.Position.x = porchMinX;
-    }
-
-    if (mWorld.MainPlayer.Position.x > porchMaxX)
-    {
-        mWorld.MainPlayer.Position.x = porchMaxX;
-    }
-
-    if (mWorld.MainPlayer.Position.z < porchMinZ)
-    {
-        mWorld.MainPlayer.Position.z = porchMinZ;
-    }
-
-    if (mWorld.MainPlayer.Position.z > porchMaxZ)
-    {
-        mWorld.MainPlayer.Position.z = porchMaxZ;
-    }
-
-    mDoorSystem.UpdateDoorInteractionFeedback();
-    mDoorSystem.HandleDoorInteraction();
+	mWorld.MainCamera.Position.x = mWorld.MainPlayer.Position.x;
+    mWorld.MainCamera.Position.y = mWorld.MainPlayer.Position.y+3.6f;
+    mWorld.MainCamera.Position.z = mWorld.MainPlayer.Position.z-3.3f;
 }
 
 void App::Render()

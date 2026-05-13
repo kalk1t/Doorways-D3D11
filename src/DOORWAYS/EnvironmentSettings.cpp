@@ -30,7 +30,7 @@ EnvironmentSettings GetEnvironmentSettings(
     case EnvironmentId::Porch:
     default:
         
-        settings.ClearColor = XMFLOAT4(0.010f, 0.018f, 0.055f, 1.0f);
+        settings.ClearColor = XMFLOAT4(0.0f, 0.9f, 0.055f, 1.0f);
 
         
         float moonPulse = 0.5f + 0.5f * sinf(environmentTime * 0.45f);

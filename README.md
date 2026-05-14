@@ -28,38 +28,32 @@ The project will continue to grow through small playable milestones.
 
 ---
 
-## Current Direction
+## Milestone 13 — Blender Primary Scene Pipeline
 
-The project is now asset-driven.
+This milestone introduced the first Blender-authored scene pipeline for Doorways.
 
-Blender is used for:
+### Completed
 
-- importing downloaded 3D assets
-- cleaning models
-- scaling models
-- arranging scene pieces
-- preparing game-ready exports
-- exporting OBJ files for Doorways
+- Created `Doorways_PrimaryScene.blend` as the master Blender scene file.
+- Established Blender-to-engine coordinate conventions.
+- Built the first primary blockout scene:
+  - porch platform
+  - railings and posts
+  - nine stairs
+  - raised temple landing
+  - temple body, roof, and columns
+  - surrounding mountain placeholders
+  - waterfall placeholder
+- Exported a single test cube from Blender as OBJ.
+- Loaded the exported OBJ successfully in the DirectX engine.
+- Exported the full primary blockout scene as OBJ.
+- Confirmed the full scene renders correctly in-engine.
 
-Doorways is used for:
+### Pipeline Confirmed
 
-- running the playable scene
-- rendering with Direct3D 11
-- controlling the player/camera
-- loading exported assets
-- building the actual game experience
+The project can now use Blender as a 3D scene authoring tool and export OBJ files into the custom DirectX renderer.
 
-Current asset workflow:
+Current pipeline:
 
 ```text
-External 3D asset / Blender scene
-        ↓
-clean and prepare in Blender
-        ↓
-export as OBJ
-        ↓
-assets/models/exported/primary_scene.obj
-        ↓
-Doorways loads the model
-        ↓
-Direct3D 11 renders the playable scene
+Blender scene -> OBJ export -> DirectX OBJ loader -> rendered scene

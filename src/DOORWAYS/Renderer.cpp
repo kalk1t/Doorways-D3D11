@@ -1499,7 +1499,7 @@ bool Renderer::LoadStaticMesh(
 bool Renderer::BuildAssetMeshes()
 {
     if (!LoadStaticMesh(
-        "..\\..\\assets\\models\\exported\\primary_scene.obj",
+        "..\\..\\assets\\models\\exports\\primary_scene_01.obj",
         mPrimarySceneMesh))
     {
         return false;

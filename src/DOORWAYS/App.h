@@ -4,7 +4,7 @@
 #include "Renderer.h"
 #include "WorldRenderer.h"
 #include "WorldState.h"
-#include "DoorSystem.h"
+#include "PlayerController.h"
 
 using namespace DirectX;
 
@@ -47,6 +47,6 @@ public:
 
     Renderer mRenderer;
     WorldRenderer mWorldRenderer;
-	DoorSystem mDoorSystem;
     WorldState mWorld;
+	PlayerController mPlayerController;
 };

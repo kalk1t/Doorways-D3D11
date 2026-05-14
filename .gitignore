@@ -26,6 +26,9 @@ obj/
 *.lib
 *.exp
 
+# Allow Wavefront OBJ model files inside game assets.
+!assets/models/**/*.obj
+
 # Logs
 *.log
 
@@ -36,3 +39,12 @@ obj/
 # OS files
 Thumbs.db
 .DS_Store
+
+# Raw downloaded asset archives / temporary source files
+assets/downloads/
+assets/raw/
+
+# Blender backup files
+*.blend1
+*.blend2
+*.blend@

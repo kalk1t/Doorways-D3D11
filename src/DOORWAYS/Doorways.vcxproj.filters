@@ -21,9 +21,6 @@
     <ClCompile Include="App.cpp">
       <Filter>Resource Files</Filter>
     </ClCompile>
-    <ClCompile Include="Environment.h">
-      <Filter>Header Files</Filter>
-    </ClCompile>
     <ClCompile Include="Renderer.cpp">
       <Filter>Resource Files</Filter>
     </ClCompile>
@@ -36,7 +33,10 @@
     <ClCompile Include="EnvironmentSettings.cpp">
       <Filter>Resource Files</Filter>
     </ClCompile>
-    <ClCompile Include="DoorSystem.cpp">
+    <ClCompile Include="ObjLoader.cpp">
+      <Filter>Resource Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PlayerController.cpp">
       <Filter>Resource Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -65,7 +65,13 @@
     <ClInclude Include="WorldState.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="DoorSystem.h">
+    <ClInclude Include="Mesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ObjLoader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerController.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

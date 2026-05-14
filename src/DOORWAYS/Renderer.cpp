@@ -1,5 +1,6 @@
 #include "RenderTypes.h"
 #include "Renderer.h"
+#include "ObjLoader.h"
 
 #include <d3dcompiler.h>
 #include <cstddef>
@@ -19,283 +20,6 @@
 using namespace DirectX;
 using namespace std;
 
-
-const char* const* GetGlyphRows(char c)
-{
-    static const char* Blank[7] =
-    {
-        ".....",
-        ".....",
-        ".....",
-        ".....",
-        ".....",
-        ".....",
-        "....."
-    };
-
-    static const char* A[7] =
-    {
-        ".###.",
-        "#...#",
-        "#...#",
-        "#####",
-        "#...#",
-        "#...#",
-        "#...#"
-    };
-
-    static const char* I[7] =
-    {
-        "#####",
-        "..#..",
-        "..#..",
-        "..#..",
-        "..#..",
-        "..#..",
-        "#####"
-    };
-
-    static const char* N[7] =
-    {
-        "#...#",
-        "##..#",
-        "#.#.#",
-        "#..##",
-        "#...#",
-        "#...#",
-        "#...#"
-    };
-
-    static const char* O[7] =
-    {
-        ".###.",
-        "#...#",
-        "#...#",
-        "#...#",
-        "#...#",
-        "#...#",
-        ".###."
-    };
-
-    static const char* R[7] =
-    {
-        "####.",
-        "#...#",
-        "#...#",
-        "####.",
-        "#.#..",
-        "#..#.",
-        "#...#"
-    };
-
-    static const char* S[7] =
-    {
-        ".####",
-        "#....",
-        "#....",
-        ".###.",
-        "....#",
-        "....#",
-        "####."
-    };
-
-    static const char* U[7] =
-    {
-        "#...#",
-        "#...#",
-        "#...#",
-        "#...#",
-        "#...#",
-        "#...#",
-        ".###."
-    };
-
-    static const char* W[7] =
-    {
-        "#...#",
-        "#...#",
-        "#...#",
-        "#.#.#",
-        "#.#.#",
-        "##.##",
-        "#...#"
-    };
-
-    static const char* Y[7] =
-    {
-        "#...#",
-        "#...#",
-        ".#.#.",
-        "..#..",
-        "..#..",
-        "..#..",
-        "..#.."
-    };
-
-    switch (c)
-    {
-    case 'A': return A;
-    case 'I': return I;
-    case 'N': return N;
-    case 'O': return O;
-    case 'R': return R;
-    case 'S': return S;
-    case 'U': return U;
-    case 'W': return W;
-    case 'Y': return Y;
-    default:  return Blank;
-    }
-}
-
-bool CreateTextLabelTexture(
-    ID3D11Device* device,
-    const std::string& text,
-    std::uint8_t bgR,
-    std::uint8_t bgG,
-    std::uint8_t bgB,
-    std::uint8_t bgA,
-    std::uint8_t textR,
-    std::uint8_t textG,
-    std::uint8_t textB,
-    std::uint8_t textA,
-    ID3D11Texture2D** outTexture,
-    ID3D11ShaderResourceView** outTextureView)
-{
-    constexpr UINT textureWidth = 128;
-    constexpr UINT textureHeight = 32;
-    constexpr UINT bytesPerPixel = 4;
-
-    std::uint8_t pixels[textureWidth * textureHeight * bytesPerPixel] = {};
-
-    for (UINT y = 0; y < textureHeight; ++y)
-    {
-        for (UINT x = 0; x < textureWidth; ++x)
-        {
-            UINT index = (y * textureWidth + x) * bytesPerPixel;
-
-            pixels[index + 0] = bgR;
-            pixels[index + 1] = bgG;
-            pixels[index + 2] = bgB;
-            pixels[index + 3] = bgA;
-        }
-    }
-
-    constexpr int glyphWidth = 5;
-    constexpr int glyphHeight = 7;
-    constexpr int glyphSpacing = 1;
-    constexpr int scale = 3;
-
-    int textWidth = 0;
-
-    if (!text.empty())
-    {
-        textWidth =
-            static_cast<int>(text.size()) * glyphWidth * scale +
-            static_cast<int>(text.size() - 1) * glyphSpacing * scale;
-    }
-
-    int textHeight = glyphHeight * scale;
-
-    int startX = (static_cast<int>(textureWidth) - textWidth) / 2;
-    int startY = (static_cast<int>(textureHeight) - textHeight) / 2;
-
-    int cursorX = startX;
-
-    for (char c : text)
-    {
-        const char* const* glyphRows = GetGlyphRows(c);
-
-        for (int row = 0; row < glyphHeight; ++row)
-        {
-            for (int col = 0; col < glyphWidth; ++col)
-            {
-                if (glyphRows[row][col] != '#')
-                {
-                    continue;
-                }
-
-                for (int sy = 0; sy < scale; ++sy)
-                {
-                    for (int sx = 0; sx < scale; ++sx)
-                    {
-                        int pixelX = cursorX + col * scale + sx;
-                        int pixelY = startY + row * scale + sy;
-
-                        if (pixelX < 0 ||
-                            pixelX >= static_cast<int>(textureWidth) ||
-                            pixelY < 0 ||
-                            pixelY >= static_cast<int>(textureHeight))
-                        {
-                            continue;
-                        }
-
-                        UINT index =
-                            (static_cast<UINT>(pixelY) * textureWidth +
-                                static_cast<UINT>(pixelX)) * bytesPerPixel;
-
-                        pixels[index + 0] = textR;
-                        pixels[index + 1] = textG;
-                        pixels[index + 2] = textB;
-                        pixels[index + 3] = textA;
-                    }
-                }
-            }
-        }
-
-        cursorX += (glyphWidth + glyphSpacing) * scale;
-    }
-
-    D3D11_TEXTURE2D_DESC textureDesc = {};
-
-    textureDesc.Width = textureWidth;
-    textureDesc.Height = textureHeight;
-    textureDesc.MipLevels = 1;
-    textureDesc.ArraySize = 1;
-    textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-
-    textureDesc.SampleDesc.Count = 1;
-    textureDesc.SampleDesc.Quality = 0;
-
-    textureDesc.Usage = D3D11_USAGE_IMMUTABLE;
-    textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-    textureDesc.CPUAccessFlags = 0;
-    textureDesc.MiscFlags = 0;
-
-    D3D11_SUBRESOURCE_DATA textureInitData = {};
-
-    textureInitData.pSysMem = pixels;
-    textureInitData.SysMemPitch = textureWidth * bytesPerPixel;
-    textureInitData.SysMemSlicePitch = 0;
-
-    HRESULT hr = device->CreateTexture2D(
-        &textureDesc,
-        &textureInitData,
-        outTexture);
-
-    if (FAILED(hr))
-    {
-        return false;
-    }
-
-    D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-
-    srvDesc.Format = textureDesc.Format;
-    srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-    srvDesc.Texture2D.MostDetailedMip = 0;
-    srvDesc.Texture2D.MipLevels = 1;
-
-    hr = device->CreateShaderResourceView(
-        *outTexture,
-        &srvDesc,
-        outTextureView);
-
-    if (FAILED(hr))
-    {
-        return false;
-    }
-
-    return true;
-}
 
 bool CreateSolidColorTexture(
     ID3D11Device* device,
@@ -549,6 +273,7 @@ void Renderer::ClearFrame(XMFLOAT4 ClearColor)
         0);
 }
 
+
 bool Renderer::BuildShaders()
 {
     UINT compileFlags = 0;
@@ -679,18 +404,23 @@ bool Renderer::BuildShaders()
 bool Renderer::BuildGeometry()
 {
     if (!BuildBoxGeometry())
-        return false;
-    if (!BuildSphereGeometry())
-        return false;
-    if (!BuildMountainGeometry())
     {
         return false;
     }
-	if (!BuildConstantBuffers())
+    if (!BuildSphereGeometry())
     {
         return false;
     }
 
+    if (!BuildAssetMeshes())
+    {
+        return false;
+    }
+
+	if (!BuildConstantBuffers())
+    {
+        return false;
+    }
 
     return true;
 
@@ -1008,128 +738,6 @@ bool Renderer::BuildSphereGeometry() {
     return true;
 }
 
-bool Renderer::BuildMountainGeometry()
-{
-    // =====================================================
-    // Mountain peak mesh
-    // =====================================================
-    //
-    // Local shape:
-    // x = width direction
-    // y = height direction
-    // z = thickness direction
-    //
-    // This is a triangular prism:
-    // front triangle, back triangle, two sloped sides, and bottom.
-
-    Vertex mountainVertices[] =
-    {
-        // Front triangle, z = -0.5
-        { XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT3(0.0f, 0.0f, -1.0f), XMFLOAT2(0.0f, 1.0f) },
-        { XMFLOAT3(0.0f,  0.5f, -0.5f), XMFLOAT3(0.0f, 0.0f, -1.0f), XMFLOAT2(0.5f, 0.0f) },
-        { XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT3(0.0f, 0.0f, -1.0f), XMFLOAT2(1.0f, 1.0f) },
-
-        // Back triangle, z = +0.5
-        { XMFLOAT3(-0.5f, -0.5f,  0.5f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT2(0.0f, 1.0f) },
-        { XMFLOAT3(0.0f,  0.5f,  0.5f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT2(0.5f, 0.0f) },
-        { XMFLOAT3(0.5f, -0.5f,  0.5f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT2(1.0f, 1.0f) },
-
-        // Left sloped side
-        { XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT3(-0.70f, 0.70f, 0.0f), XMFLOAT2(0.0f, 1.0f) },
-        { XMFLOAT3(-0.5f, -0.5f,  0.5f), XMFLOAT3(-0.70f, 0.70f, 0.0f), XMFLOAT2(1.0f, 1.0f) },
-        { XMFLOAT3(0.0f,  0.5f,  0.5f), XMFLOAT3(-0.70f, 0.70f, 0.0f), XMFLOAT2(1.0f, 0.0f) },
-        { XMFLOAT3(0.0f,  0.5f, -0.5f), XMFLOAT3(-0.70f, 0.70f, 0.0f), XMFLOAT2(0.0f, 0.0f) },
-
-        // Right sloped side
-        { XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT3(0.70f, 0.70f, 0.0f), XMFLOAT2(0.0f, 1.0f) },
-        { XMFLOAT3(0.0f,  0.5f, -0.5f), XMFLOAT3(0.70f, 0.70f, 0.0f), XMFLOAT2(0.0f, 0.0f) },
-        { XMFLOAT3(0.0f,  0.5f,  0.5f), XMFLOAT3(0.70f, 0.70f, 0.0f), XMFLOAT2(1.0f, 0.0f) },
-        { XMFLOAT3(0.5f, -0.5f,  0.5f), XMFLOAT3(0.70f, 0.70f, 0.0f), XMFLOAT2(1.0f, 1.0f) },
-
-        // Bottom face
-        { XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT3(0.0f, -1.0f, 0.0f), XMFLOAT2(0.0f, 0.0f) },
-        { XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT3(0.0f, -1.0f, 0.0f), XMFLOAT2(1.0f, 0.0f) },
-        { XMFLOAT3(0.5f, -0.5f,  0.5f), XMFLOAT3(0.0f, -1.0f, 0.0f), XMFLOAT2(1.0f, 1.0f) },
-        { XMFLOAT3(-0.5f, -0.5f,  0.5f), XMFLOAT3(0.0f, -1.0f, 0.0f), XMFLOAT2(0.0f, 1.0f) },
-    };
-
-    unsigned short mountainIndices[] =
-    {
-        // Front triangle
-        0, 1, 2,
-
-        // Back triangle
-        3, 5, 4,
-
-        // Left sloped side
-        6, 7, 8,
-        6, 8, 9,
-
-        // Right sloped side
-        10, 11, 12,
-        10, 12, 13,
-
-        // Bottom
-        14, 15, 16,
-        14, 16, 17
-    };
-
-    mMountainIndexCount =
-        static_cast<UINT>(sizeof(mountainIndices) / sizeof(mountainIndices[0]));
-
-    D3D11_BUFFER_DESC mountainVertexBufferDesc = {};
-
-    mountainVertexBufferDesc.ByteWidth = sizeof(mountainVertices);
-    mountainVertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
-    mountainVertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-    mountainVertexBufferDesc.CPUAccessFlags = 0;
-    mountainVertexBufferDesc.MiscFlags = 0;
-    mountainVertexBufferDesc.StructureByteStride = 0;
-
-    D3D11_SUBRESOURCE_DATA mountainVertexInitData = {};
-
-    mountainVertexInitData.pSysMem = mountainVertices;
-    mountainVertexInitData.SysMemPitch = 0;
-    mountainVertexInitData.SysMemSlicePitch = 0;
-
-    HRESULT hr = mDevice->CreateBuffer(
-        &mountainVertexBufferDesc,
-        &mountainVertexInitData,
-        mMountainVertexBuffer.GetAddressOf());
-
-    if (FAILED(hr))
-    {
-        return false;
-    }
-
-    D3D11_BUFFER_DESC mountainIndexBufferDesc = {};
-
-    mountainIndexBufferDesc.ByteWidth = sizeof(mountainIndices);
-    mountainIndexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
-    mountainIndexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-    mountainIndexBufferDesc.CPUAccessFlags = 0;
-    mountainIndexBufferDesc.MiscFlags = 0;
-    mountainIndexBufferDesc.StructureByteStride = 0;
-
-    D3D11_SUBRESOURCE_DATA mountainIndexInitData = {};
-
-    mountainIndexInitData.pSysMem = mountainIndices;
-    mountainIndexInitData.SysMemPitch = 0;
-    mountainIndexInitData.SysMemSlicePitch = 0;
-
-    hr = mDevice->CreateBuffer(
-        &mountainIndexBufferDesc,
-        &mountainIndexInitData,
-        mMountainIndexBuffer.GetAddressOf());
-
-    if (FAILED(hr))
-    {
-        return false;
-    }
-
-    return true;
-}
-
 bool CreateMoonGlowTexture(
     ID3D11Device* device,
     ID3D11Texture2D** outTexture,
@@ -1323,15 +931,6 @@ bool Renderer::BuildTextures()
         return false;
     }
 
-    hr = CreateWICTextureFromFile(mDevice.Get(),
-        L"..\\..\\assets\\textures\\night\\mountain_rock.jpg",
-        reinterpret_cast<ID3D11Resource**>(mMountainTexture.GetAddressOf()),
-        mMountainSRV.GetAddressOf());
-    if (FAILED(hr))
-    {
-        return false;
-    }
-
 
     if (!CreateMoonGlowTexture(
         mDevice.Get(),
@@ -1341,131 +940,6 @@ bool Renderer::BuildTextures()
         return false;
     }
 
-    // =====================================================
-// Procedural mountain rock texture
-// =====================================================
-    constexpr UINT mountainTextureWidth = 16;
-    constexpr UINT mountainTextureHeight = 16;
-
-    std::uint8_t mountainPixels
-        [mountainTextureWidth * mountainTextureHeight * bytesPerPixel] = {};
-
-    for (UINT y = 0; y < mountainTextureHeight; ++y)
-    {
-        for (UINT x = 0; x < mountainTextureWidth; ++x)
-        {
-            UINT pixelIndex =
-                (y * mountainTextureWidth + x) * bytesPerPixel;
-
-            // Simple deterministic noise.
-            // This creates uneven rock color without loading an image file.
-            UINT noise =
-                (x * 37u + y * 17u + x * y * 11u) % 45u;
-
-            // Dark blue-gray mountain base.
-            std::uint8_t r = static_cast<std::uint8_t>(45u + noise);
-            std::uint8_t g = static_cast<std::uint8_t>(50u + noise);
-            std::uint8_t b = static_cast<std::uint8_t>(65u + noise);
-
-            // Add some colder bright streaks.
-            if (((x + y) % 7u) == 0u)
-            {
-                r = static_cast<std::uint8_t>(r + 25u);
-                g = static_cast<std::uint8_t>(g + 25u);
-                b = static_cast<std::uint8_t>(b + 30u);
-            }
-
-            mountainPixels[pixelIndex + 0] = r;
-            mountainPixels[pixelIndex + 1] = g;
-            mountainPixels[pixelIndex + 2] = b;
-            mountainPixels[pixelIndex + 3] = 255;
-        }
-    }
-
-    D3D11_TEXTURE2D_DESC mountainTextureDesc = {};
-
-    mountainTextureDesc.Width = mountainTextureWidth;
-    mountainTextureDesc.Height = mountainTextureHeight;
-    mountainTextureDesc.MipLevels = 1;
-    mountainTextureDesc.ArraySize = 1;
-    mountainTextureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-
-    mountainTextureDesc.SampleDesc.Count = 1;
-    mountainTextureDesc.SampleDesc.Quality = 0;
-
-    mountainTextureDesc.Usage = D3D11_USAGE_IMMUTABLE;
-    mountainTextureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-    mountainTextureDesc.CPUAccessFlags = 0;
-    mountainTextureDesc.MiscFlags = 0;
-
-    D3D11_SUBRESOURCE_DATA mountainTextureInitData = {};
-
-    mountainTextureInitData.pSysMem = mountainPixels;
-    mountainTextureInitData.SysMemPitch =
-        mountainTextureWidth * bytesPerPixel;
-    mountainTextureInitData.SysMemSlicePitch = 0;
-
-    hr = mDevice->CreateTexture2D(
-        &mountainTextureDesc,
-        &mountainTextureInitData,
-        mMountainTexture.GetAddressOf());
-
-    if (FAILED(hr))
-    {
-        return false;
-    }
-
-    D3D11_SHADER_RESOURCE_VIEW_DESC mountainSrvDesc = {};
-
-    mountainSrvDesc.Format = mountainTextureDesc.Format;
-    mountainSrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-    mountainSrvDesc.Texture2D.MostDetailedMip = 0;
-    mountainSrvDesc.Texture2D.MipLevels = 1;
-
-    hr = mDevice->CreateShaderResourceView(
-        mMountainTexture.Get(),
-        &mountainSrvDesc,
-        mMountainSRV.GetAddressOf());
-
-    if (FAILED(hr))
-    {
-        return false;
-    }
-
-
-
-    if (!CreateTextLabelTexture(
-        mDevice.Get(),
-        "SUNNY",
-        245, 190, 45, 255,
-        20, 20, 20, 255,
-        mSunnyLabelTexture.GetAddressOf(),
-        mSunnyLabelTextureView.GetAddressOf()))
-    {
-        return false;
-    }
-
-    if (!CreateTextLabelTexture(
-        mDevice.Get(),
-        "RAINY",
-        45, 110, 220, 255,
-        245, 245, 245, 255,
-        mRainyLabelTexture.GetAddressOf(),
-        mRainyLabelTextureView.GetAddressOf()))
-    {
-        return false;
-    }
-
-    if (!CreateTextLabelTexture(
-        mDevice.Get(),
-        "SNOWY",
-        230, 245, 255, 255,
-        20, 20, 20, 255,
-        mSnowyLabelTexture.GetAddressOf(),
-        mSnowyLabelTextureView.GetAddressOf()))
-    {
-        return false;
-    }
 
     if (!CreateSolidColorTexture(
         mDevice.Get(),
@@ -1815,40 +1289,86 @@ void Renderer::DrawDoorLabel(
     DrawBox(world, viewProjection, material);
 }
 
-void Renderer::DrawMountainPeak(
+
+
+bool Renderer::CreateGpuMesh(
+    const MeshData& meshData,
+    GpuMesh& outMesh)
+{
+    if (meshData.Vertices.empty() || meshData.Indices.empty())
+    {
+        return false;
+    }
+
+    outMesh = {};
+
+    D3D11_BUFFER_DESC vertexBufferDesc = {};
+    vertexBufferDesc.ByteWidth =
+        static_cast<UINT>(meshData.Vertices.size() * sizeof(Vertex));
+    vertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+    vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    vertexBufferDesc.CPUAccessFlags = 0;
+    vertexBufferDesc.MiscFlags = 0;
+    vertexBufferDesc.StructureByteStride = 0;
+
+    D3D11_SUBRESOURCE_DATA vertexInitData = {};
+    vertexInitData.pSysMem = meshData.Vertices.data();
+
+    HRESULT hr = mDevice->CreateBuffer(
+        &vertexBufferDesc,
+        &vertexInitData,
+        outMesh.VertexBuffer.GetAddressOf());
+
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    D3D11_BUFFER_DESC indexBufferDesc = {};
+    indexBufferDesc.ByteWidth =
+        static_cast<UINT>(meshData.Indices.size() * sizeof(unsigned int));
+    indexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+    indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+    indexBufferDesc.CPUAccessFlags = 0;
+    indexBufferDesc.MiscFlags = 0;
+    indexBufferDesc.StructureByteStride = 0;
+
+    D3D11_SUBRESOURCE_DATA indexInitData = {};
+    indexInitData.pSysMem = meshData.Indices.data();
+
+    hr = mDevice->CreateBuffer(
+        &indexBufferDesc,
+        &indexInitData,
+        outMesh.IndexBuffer.GetAddressOf());
+
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    outMesh.IndexCount = static_cast<unsigned int>(meshData.Indices.size());
+
+    return true;
+}
+
+
+void Renderer::DrawMesh(
+    const GpuMesh& mesh,
     const XMMATRIX& world,
     const XMMATRIX& viewProjection,
     const Material& material)
 {
-    UINT stride = sizeof(Vertex);
-    UINT offset = 0;
-
-    ID3D11Buffer* vertexBuffers[] =
+    if (!mesh.VertexBuffer || !mesh.IndexBuffer || mesh.IndexCount == 0)
     {
-        mMountainVertexBuffer.Get()
-    };
-
-    mImmediateContext->IASetVertexBuffers(
-        0,
-        1,
-        vertexBuffers,
-        &stride,
-        &offset);
-
-    mImmediateContext->IASetIndexBuffer(
-        mMountainIndexBuffer.Get(),
-        DXGI_FORMAT_R16_UINT,
-        0);
-
-    mImmediateContext->IASetPrimitiveTopology(
-        D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-    PerObjectConstantBuffer perObjectData = {};
+        return;
+    }
 
     XMMATRIX worldViewProjection = world * viewProjection;
 
     XMMATRIX worldInverseTranspose =
         XMMatrixTranspose(XMMatrixInverse(nullptr, world));
+
+    PerObjectConstantBuffer perObjectData = {};
 
     XMStoreFloat4x4(
         &perObjectData.WorldViewProj,
@@ -1864,6 +1384,7 @@ void Renderer::DrawMountainPeak(
 
     perObjectData.MaterialDiffuse = material.Diffuse;
     perObjectData.TexTransform = material.TexTransform;
+    perObjectData.EmissiveStrength = material.EmissiveStrength;
 
     mImmediateContext->UpdateSubresource(
         mPerObjectConstantBuffer.Get(),
@@ -1873,21 +1394,120 @@ void Renderer::DrawMountainPeak(
         0,
         0);
 
-    ID3D11ShaderResourceView* shaderResources[] =
+    ID3D11Buffer* vertexBuffers[] =
     {
-        material.DiffuseMap
+        mesh.VertexBuffer.Get()
     };
+
+    UINT strides[] =
+    {
+        sizeof(Vertex)
+    };
+
+    UINT offsets[] =
+    {
+        0
+    };
+
+    mImmediateContext->IASetInputLayout(mInputLayout.Get());
+
+    mImmediateContext->IASetVertexBuffers(
+        0,
+        1,
+        vertexBuffers,
+        strides,
+        offsets);
+
+    mImmediateContext->IASetIndexBuffer(
+        mesh.IndexBuffer.Get(),
+        DXGI_FORMAT_R32_UINT,
+        0);
+
+    mImmediateContext->IASetPrimitiveTopology(
+        D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    mImmediateContext->VSSetShader(
+        mVertexShader.Get(),
+        nullptr,
+        0);
+
+    mImmediateContext->PSSetShader(
+        mPixelShader.Get(),
+        nullptr,
+        0);
+
+    ID3D11Buffer* perObjectConstantBuffers[] =
+    {
+        mPerObjectConstantBuffer.Get()
+    };
+
+    mImmediateContext->VSSetConstantBuffers(
+        0,
+        1,
+        perObjectConstantBuffers);
+
+    mImmediateContext->PSSetConstantBuffers(
+        0,
+        1,
+        perObjectConstantBuffers);
+
+    ID3D11ShaderResourceView* textureView = material.DiffuseMap;
+
+    if (textureView == nullptr)
+    {
+        textureView = mWhiteTextureView.Get();
+    }
 
     mImmediateContext->PSSetShaderResources(
         0,
         1,
-        shaderResources);
+        &textureView);
 
     mImmediateContext->DrawIndexed(
-        mMountainIndexCount,
+        mesh.IndexCount,
         0,
         0);
 }
+
+bool Renderer::LoadStaticMesh(
+    const char* filePath,
+    GpuMesh& outMesh)
+{
+    MeshData meshData;
+
+    if (!ObjLoader::LoadFromFile(filePath, meshData))
+    {
+        OutputDebugStringA("Failed to load static mesh OBJ file.\n");
+        OutputDebugStringA(filePath);
+        OutputDebugStringA("\n");
+
+        return false;
+    }
+
+    if (!CreateGpuMesh(meshData, outMesh))
+    {
+        OutputDebugStringA("Failed to create GPU mesh for static mesh.\n");
+        OutputDebugStringA(filePath);
+        OutputDebugStringA("\n");
+
+        return false;
+    }
+
+    return true;
+}
+
+bool Renderer::BuildAssetMeshes()
+{
+    if (!LoadStaticMesh(
+        "..\\..\\assets\\models\\exported\\primary_scene.obj",
+        mPrimarySceneMesh))
+    {
+        return false;
+    }
+
+    return true;
+}
+
 
 void Renderer::Present()
 {

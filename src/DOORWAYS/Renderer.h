@@ -5,6 +5,7 @@
 #include <DirectXMath.h>
 
 #include "EnvironmentSettings.h"
+#include "Mesh.h"
 
 struct Material
 {
@@ -24,6 +25,23 @@ public:
     void Present();
 
 
+
+    bool CreateGpuMesh(
+        const MeshData& meshData,
+        GpuMesh& outMesh);
+
+    void DrawMesh(
+        const GpuMesh& mesh,
+        const XMMATRIX& world,
+        const XMMATRIX& viewProjection,
+        const Material& material);
+
+    bool BuildAssetMeshes();
+    bool LoadStaticMesh(
+        const char* filePath,
+        GpuMesh& outMesh);
+
+
     bool BuildBlendStates();
 	void SetAlphaBlendingEnabled(bool enabled);
     void BindRenderPipeline();
@@ -34,11 +52,6 @@ public:
         const Material& material);
 
     void DrawDoorLabel(
-        const XMMATRIX& world,
-        const XMMATRIX& viewProjection,
-        const Material& material);
-
-    void DrawMountainPeak(
         const XMMATRIX& world,
         const XMMATRIX& viewProjection,
         const Material& material);
@@ -54,7 +67,6 @@ public:
     bool BuildConstantBuffers();
     bool BuildBoxGeometry();
     bool BuildSphereGeometry();
-	bool BuildMountainGeometry();
 
 	bool BuildSamplerState();
 	bool BuildTextures();
@@ -81,9 +93,6 @@ public:
     Microsoft::WRL::ComPtr<ID3D11Buffer> mSphereVertexBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer> mSphereIndexBuffer;
 
-    Microsoft::WRL::ComPtr<ID3D11Buffer> mMountainVertexBuffer;
-    Microsoft::WRL::ComPtr<ID3D11Buffer> mMountainIndexBuffer;
-
 
     UINT mBoxIndexCount = 0;
     UINT mSphereIndexCount = 0;
@@ -97,15 +106,6 @@ public:
 
     Microsoft::WRL::ComPtr<ID3D11Texture2D> mDiffuseTexture;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> mDiffuseTextureView;
-
-    Microsoft::WRL::ComPtr<ID3D11Texture2D> mSunnyLabelTexture;
-    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> mSunnyLabelTextureView;
-
-    Microsoft::WRL::ComPtr<ID3D11Texture2D> mRainyLabelTexture;
-    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> mRainyLabelTextureView;
-
-    Microsoft::WRL::ComPtr<ID3D11Texture2D> mSnowyLabelTexture;
-    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> mSnowyLabelTextureView;
 
     Microsoft::WRL::ComPtr<ID3D11SamplerState> mSamplerState;
 
@@ -128,8 +128,7 @@ public:
     Microsoft::WRL::ComPtr<ID3D11Texture2D> mStarSkyTexture;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> mStarSkySRV;
 
-    //mountain
-    Microsoft::WRL::ComPtr<ID3D11Texture2D> mMountainTexture;
-    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> mMountainSRV;
 
+    
+	GpuMesh mPrimarySceneMesh;
 };

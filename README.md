@@ -1,71 +1,65 @@
 # Doorways
 
-Doorways is a small Direct3D 11 graphics demo written in C++.
+Doorways is a Direct3D 11 game project written in C++.
 
-The project is being built as a learning and portfolio project. The goal is not to use a ready-made engine, but to build the rendering foundation step by step and understand how the main parts of a 3D program work.
+The project started as a learning-focused graphics demo, but it has now moved into a playable 3D game direction. The goal is to build an atmospheric game world using a custom Direct3D 11 renderer, imported 3D assets, Blender-based scene preparation, and step-by-step engine improvements.
 
-The demo will start on a porch surrounded by mountains. In front of the player will be several labeled doors. Each door will lead to a different environment, such as a rainy scene, snowy scene and sunny scene.
+The current focus is no longer to manually build the entire world from hardcoded boxes. Instead, Doorways now uses Blender as the asset preparation and scene-building tool, then exports game-ready OBJ files into the Direct3D runtime.
 
-## Project Goal
-
-The main goal of Doorways is to practice the Direct3D 11 knowledge.
-
-This project is meant to demonstrate:
-
-- Direct3D 11 window and device initialization
-- swap chain, render target, depth buffer, and viewport setup
-- the 3D rendering pipeline
-- vertex buffers and index buffers
-- world, view, and projection matrices
-- camera movement
-- basic scene organization
-- lighting and materials
-- HLSL shader programming
-- texture loading and texture mapping
-- simple environment transitions
-- basic character or player movement
-- Git and GitHub project organization
+---
 
 ## Project Vision
 
-The player begins on a wooden porch with a mountain view.
+Doorways is intended to become a playable atmospheric 3D experience.
 
-The porch contains several doors with labels. Each door represents a separate environment. When the player enters a door, the scene changes to that environment.
+The player begins in a mysterious night environment under a moonlit sky. The world will gradually be built from real 3D assets: ruins, stone structures, terrain, rocks, wooden objects, mountains, temple pieces, and other environment details.
 
-Planned first environments:
+The long-term vision is to create a scene that feels like a real game space rather than a renderer test:
 
-- Rainy environment
-- Snowy environment
-- Sunny environment
+- a playable 3D world
+- strong night atmosphere
+- moon and sky presence
+- imported 3D environment assets
+- first playable exploration mechanics
+- clean camera/player controls
+- eventually doorways, transitions, and different environments
 
-The first version of the project will focus on simple geometry and clean structure before adding textures, models, and polish.
+The project will continue to grow through small playable milestones.
 
-## Technology
+---
 
-- C++
-- Direct3D 11
-- HLSL
-- Visual Studio
-- Git / GitHub
-## Current Milestone Update — Porch / Temple / Stair Environment Lock
+## Current Direction
 
-The project has reached a new environment milestone focused on building the main porch composition.
+The project is now asset-driven.
 
-The current scene now has a complete readable world layout:
+Blender is used for:
+
+- importing downloaded 3D assets
+- cleaning models
+- scaling models
+- arranging scene pieces
+- preparing game-ready exports
+- exporting OBJ files for Doorways
+
+Doorways is used for:
+
+- running the playable scene
+- rendering with Direct3D 11
+- controlling the player/camera
+- loading exported assets
+- building the actual game experience
+
+Current asset workflow:
 
 ```text
-                -Z direction
-
-              [ Raised Temple Area ]
-              [ 9 Stairs Up ]
-              [ Temple Entrance Depth ]
-              [ Temple Front Wall ]
-              [ Temple Threshold ]
-
-              [ Porch Terrace ]
-
-              [ Stair Landing ]
-              [ 21 Stairs Down ]
-              [ Rocky / Grassy Field ]
-
-                +Z direction
+External 3D asset / Blender scene
+        ↓
+clean and prepare in Blender
+        ↓
+export as OBJ
+        ↓
+assets/models/exported/primary_scene.obj
+        ↓
+Doorways loads the model
+        ↓
+Direct3D 11 renders the playable scene

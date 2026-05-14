@@ -22,20 +22,7 @@ namespace
 {
     const wchar_t* gWindowClassName = L"DoorwaysDemoWindowClass";
 
-    struct DoorConfig
-    {
-        EnvironmentId Environment;
-        float X;
-        const char* LabelText;
-    };
-    constexpr DoorConfig gDoorConfigs[] =
-    {
-        { EnvironmentId::Sunny, -1.5f, "SUNNY" },
-        { EnvironmentId::Rainy,  0.0f, "RAINY" },
-        { EnvironmentId::Snowy,  1.5f, "SNOWY" }
-    };
-
-
+   
     LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     {
         switch (msg)
@@ -60,7 +47,6 @@ namespace
 
 App::App(HINSTANCE hInstance)
     : mAppInstance(hInstance),
-    mDoorSystem(this),
     mWorldRenderer(this)
 {
 }
@@ -247,122 +233,25 @@ bool App::InitWindow()
 
 void App::UpdateWindowTitle()
 {
-    std::wstring title = L"Doorways: ";
-
-    if (mWorld.ActiveEnvironment == EnvironmentId::Porch)
-    {
-        title += L"Porch";
-    }
-    else
-    {
-        title += mDoorSystem.GetDoorDisplayName(mWorld.ActiveEnvironment);
-        title += L" environment";
-    }
-
-    if (mWorld.NearbyDoor != EnvironmentId::Porch)
-    {
-        title += L" | Near ";
-        title += mDoorSystem.GetDoorDisplayName(mWorld.NearbyDoor);
-        title += L" door | Press E";
-    }
-
     SetWindowTextW(
         mMainWindow,
-        title.c_str());
+        L"Doorways: Playable 3D Scene");
 }
 
 void App::Update(float deltaTime)
 {
-    mWorld.EnvironmentTime += deltaTime;
-    if (GetAsyncKeyState(VK_LEFT) & 0x8000)
-    {
-        mWorld.MainCamera.Yaw -= mWorld.MainCamera.TurnSpeed * deltaTime;
-    }
-
-    if (GetAsyncKeyState(VK_RIGHT) & 0x8000)
-    {
-        mWorld.MainCamera.Yaw += mWorld.MainCamera.TurnSpeed * deltaTime;
-    }
-
-    if (GetAsyncKeyState(VK_UP) & 0x8000)
-    {
-        mWorld.MainCamera.Pitch += mWorld.MainCamera.TurnSpeed * deltaTime;
-    }
-
-    if (GetAsyncKeyState(VK_DOWN) & 0x8000)
-    {
-        mWorld.MainCamera.Pitch -= mWorld.MainCamera.TurnSpeed * deltaTime;
-    }
-
-    if(GetAsyncKeyState('R') & 0x8000)
-    {
-        mDoorSystem.ResetToPorch();
-	}
-
+	mWorld.SceneTime += deltaTime;
+	mPlayerController.Update(mWorld, deltaTime);
     if (GetAsyncKeyState(VK_ESCAPE) & 0x8000)
     {
         DestroyWindow(mMainWindow);
     }
-
-    const float pitchLimit = 0.9f;
-
-    if (mWorld.MainCamera.Pitch > pitchLimit)
-    {
-        mWorld.MainCamera.Pitch = pitchLimit;
-    }
-
-    if (mWorld.MainCamera.Pitch < -pitchLimit)
-    {
-        mWorld.MainCamera.Pitch = -pitchLimit;
-    }
-
-    XMFLOAT3 playerMovement = XMFLOAT3(0.0f, 0.0f, 0.0f);
-
-    if (GetAsyncKeyState('W') & 0x8000)
-    {
-        playerMovement.z += 1.0f;
-    }
-
-    if (GetAsyncKeyState('S') & 0x8000)
-    {
-        playerMovement.z -= 1.0f;
-    }
-
-    if (GetAsyncKeyState('A') & 0x8000)
-    {
-        playerMovement.x -= 1.0f;
-    }
-
-    if (GetAsyncKeyState('D') & 0x8000)
-    {
-        playerMovement.x += 1.0f;
-    }
-
-    XMVECTOR movementVector = XMLoadFloat3(&playerMovement);
-
-    if (XMVectorGetX(XMVector3LengthSq(movementVector)) > 0.0f)
-    {
-        mWorld.MainPlayer.Yaw = atan2f(playerMovement.x, playerMovement.z);
-
-        movementVector = XMVector3Normalize(movementVector);
-            
-        movementVector *= mWorld.MainPlayer.MoveSpeed * deltaTime;
-        
-        XMVECTOR currentPosition = XMLoadFloat3(&mWorld.MainPlayer.Position);
-        currentPosition += movementVector;
-
-        XMStoreFloat3(&mWorld.MainPlayer.Position, currentPosition);
-    }
-
-	mWorld.MainCamera.Position.x = mWorld.MainPlayer.Position.x;
-    mWorld.MainCamera.Position.y = mWorld.MainPlayer.Position.y+3.6f;
-    mWorld.MainCamera.Position.z = mWorld.MainPlayer.Position.z-3.3f;
 }
 
 void App::Render()
 {
     EnvironmentSettings settings = 
-        GetEnvironmentSettings(mWorld.ActiveEnvironment, mWorld.EnvironmentTime);
+        GetSceneSettings(mWorld.SceneTime);
 
     mRenderer.mImmediateContext->UpdateSubresource(
         mRenderer.mPerFrameConstantBuffer.Get(),

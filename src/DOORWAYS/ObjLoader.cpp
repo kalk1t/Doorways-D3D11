@@ -170,6 +170,43 @@ namespace
                     currentMaterial->DiffuseColor = XMFLOAT4(r, g, b, 1.0f);
                 }
             }
+            else if (command == "Ks")
+            {
+                if (currentMaterial == nullptr)
+                {
+                    continue;
+                }
+
+                float r = 0.25f;
+                float g = 0.25f;
+                float b = 0.25f;
+
+                if (lineStream >> r >> g >> b)
+                {
+                    currentMaterial->SpecularColor.x = r;
+                    currentMaterial->SpecularColor.y = g;
+                    currentMaterial->SpecularColor.z = b;
+                }
+            }
+            else if (command == "Ns")
+            {
+                if (currentMaterial == nullptr)
+                {
+                    continue;
+                }
+
+                float specularPower = 32.0f;
+
+                if (lineStream >> specularPower)
+                {
+                    if (specularPower < 1.0f)
+                    {
+                        specularPower = 1.0f;
+                    }
+
+                    currentMaterial->SpecularPower = specularPower;
+                }
+            }
             else if (command == "map_Kd")
             {
                 if (currentMaterial == nullptr)
@@ -198,6 +235,7 @@ namespace
 
                 currentMaterial->DiffuseTexturePath = texturePath.string();
             }
+            
         }
 
         return !outMaterials.empty();
@@ -224,6 +262,156 @@ namespace
         }
 
         return -1;
+    }
+
+
+// Loads Doorways-specific material override data.
+//
+// Blender exports OBJ and MTL files, but Blender may overwrite the MTL
+// every time the scene is exported. Because of that, Doorways-specific
+// tuning values should live in a separate .dmat file instead of inside
+// the Blender-generated .mtl file.
+//
+// MTL owns standard exported material data:
+//   - Kd (diffuse color)
+//   - Ks (specular color)
+//   - Ns (specular power)
+//   - map_Kd (diffuse texture path)
+//
+// DMAT owns game-specific tuning:
+//   - tex_scale
+//   - specular_strength
+//
+// The material names in the .dmat file must match the material names
+// loaded from the .mtl file.
+    bool ApplyMaterialOverridesFromDmat(
+        const std::filesystem::path& dmatPath,
+        std::vector<ObjMaterialData>& materials)
+    {
+        std::ifstream dmatFile(dmatPath);
+
+        if (!dmatFile.is_open())
+        {
+            OutputDebugStringA("No Doorways material override file found:\n");
+            OutputDebugStringA(dmatPath.string().c_str());
+            OutputDebugStringA("\n");
+
+            return false;
+        }
+
+        OutputDebugStringA("Loading Doorways material override file:\n");
+        OutputDebugStringA(dmatPath.string().c_str());
+        OutputDebugStringA("\n");
+
+        ObjMaterialData* currentMaterial = nullptr;
+
+        std::string line;
+
+        while (std::getline(dmatFile, line))
+        {
+            line = TrimWhitespace(line);
+
+            if (line.empty())
+            {
+                continue;
+            }
+
+            if (line[0] == '#')
+            {
+                continue;
+            }
+
+            std::istringstream lineStream(line);
+
+            std::string command;
+            lineStream >> command;
+
+            if (command == "material")
+            {
+                std::string materialName;
+                std::getline(lineStream, materialName);
+
+                materialName = TrimWhitespace(materialName);
+
+                currentMaterial = nullptr;
+
+                int materialIndex =
+                    FindMaterialIndexByName(
+                        materials,
+                        materialName);
+
+                if (materialIndex >= 0)
+                {
+                    currentMaterial =
+                        &materials[static_cast<size_t>(materialIndex)];
+
+                    OutputDebugStringA("DMAT material matched: ");
+                    OutputDebugStringA(materialName.c_str());
+                    OutputDebugStringA("\n");
+                }
+                else
+                {
+                    OutputDebugStringA("DMAT material not found in MTL: ");
+                    OutputDebugStringA(materialName.c_str());
+                    OutputDebugStringA("\n");
+                }
+            }
+            else if (command == "tex_scale")
+            {
+                if (currentMaterial == nullptr)
+                {
+                    continue;
+                }
+
+                float uScale = 1.0f;
+                float vScale = 1.0f;
+
+                if (lineStream >> uScale >> vScale)
+                {
+                    currentMaterial->TexTransform.x = uScale;
+                    currentMaterial->TexTransform.y = vScale;
+                    currentMaterial->TexTransform.z = 0.0f;
+                    currentMaterial->TexTransform.w = 0.0f;
+
+                    currentMaterial->HasMaterialOverrideTexTransform = true;
+
+                    OutputDebugStringA("DMAT tex_scale applied: ");
+                    OutputDebugStringA(currentMaterial->Name.c_str());
+                    OutputDebugStringA(" -> ");
+                    OutputDebugStringA(std::to_string(uScale).c_str());
+                    OutputDebugStringA(", ");
+                    OutputDebugStringA(std::to_string(vScale).c_str());
+                    OutputDebugStringA("\n");
+                }
+            }
+            else if (command == "specular_strength")
+            {
+                if (currentMaterial == nullptr)
+                {
+                    continue;
+                }
+
+                float specularStrength = 1.0f;
+
+                if (lineStream >> specularStrength)
+                {
+                    if (specularStrength < 0.0f)
+                    {
+                        specularStrength = 0.0f;
+                    }
+
+                    currentMaterial->SpecularColor.w = specularStrength;
+
+                    OutputDebugStringA("DMAT specular_strength applied: ");
+                    OutputDebugStringA(currentMaterial->Name.c_str());
+                    OutputDebugStringA(" -> ");
+                    OutputDebugStringA(std::to_string(specularStrength).c_str());
+                    OutputDebugStringA("\n");
+                }
+            }
+        }
+
+        return true;
     }
 
     void CloseCurrentSubmeshIfNeeded(
@@ -329,12 +517,24 @@ bool ObjLoader::LoadFromFile(
                 {
                     outMeshData.Materials = materials;
 
+// Apply Doorways material overrides after loading the standard MTL.
+// This keeps Blender's exported .mtl file clean and allows game-side
+// material tuning to survive future Blender exports.
+                    std::filesystem::path dmatPath =
+                        objDirectory / ".." / ".." / "materials" / "primary_scene_materials.dmat";
+
+                    dmatPath = dmatPath.lexically_normal();
+
+                    ApplyMaterialOverridesFromDmat(
+                        dmatPath,
+                        outMeshData.Materials);
+
                     OutputDebugStringA("OBJ MTL materials loaded: ");
                     OutputDebugStringA(std::to_string(outMeshData.Materials.size()).c_str());
                     OutputDebugStringA("\n");
 
-                    // Milestone 17 compatibility:
-                    // Keep using the first material texture as the old single-scene texture.
+                    // Print final material list after MTL load and DMAT overrides.
+                    // Textures are now loaded per material in Renderer::CreateGpuMesh().
                     for (const ObjMaterialData& material : outMeshData.Materials)
                     {
                         OutputDebugStringA("  Material: ");
@@ -344,15 +544,11 @@ bool ObjLoader::LoadFromFile(
                         {
                             OutputDebugStringA(" | map_Kd: ");
                             OutputDebugStringA(material.DiffuseTexturePath.c_str());
-
-                            if (outMeshData.DiffuseTexturePath.empty())
-                            {
-                                outMeshData.DiffuseTexturePath = material.DiffuseTexturePath;
-                            }
                         }
 
                         OutputDebugStringA("\n");
                     }
+
                 }
                 else
                 {

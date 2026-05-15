@@ -63,7 +63,9 @@ void WorldRenderer::DrawNightSky(const XMMATRIX& viewProjection)
         skyTint,
         XMFLOAT4(1.0f, 1.0f, 0.00f, 0.00f),
         mApp->mRenderer.mStarSkySRV.Get(),
-        1.0f
+        XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f),
+    1.0f,
+    1.0f
     };
 
     Material backSkyMaterial =
@@ -71,7 +73,9 @@ void WorldRenderer::DrawNightSky(const XMMATRIX& viewProjection)
         skyTint,
         XMFLOAT4(1.0f, 1.0f, 0.35f, 0.10f),
         mApp->mRenderer.mStarSkySRV.Get(),
-        1.0f
+       XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f),
+    1.0f,
+    1.0f
     };
 
     Material leftSkyMaterial =
@@ -79,7 +83,9 @@ void WorldRenderer::DrawNightSky(const XMMATRIX& viewProjection)
         skyTint,
         XMFLOAT4(1.0f, 1.0f, 0.70f, 0.20f),
         mApp->mRenderer.mStarSkySRV.Get(),
-        1.0f
+        XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f),
+    1.0f,
+    1.0f
     };
 
     Material rightSkyMaterial =
@@ -87,7 +93,9 @@ void WorldRenderer::DrawNightSky(const XMMATRIX& viewProjection)
         skyTint,
         XMFLOAT4(1.0f, 1.0f, 0.15f, 0.35f),
         mApp->mRenderer.mStarSkySRV.Get(),
-        1.0f
+        XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f),
+    1.0f,
+    1.0f
     };
 
     Material topSkyMaterial =
@@ -95,7 +103,9 @@ void WorldRenderer::DrawNightSky(const XMMATRIX& viewProjection)
         skyTint,
         XMFLOAT4(1.25f, 1.25f, 0.25f, 0.15f),
         mApp->mRenderer.mStarSkySRV.Get(),
-        1.0f
+        XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f),
+    1.0f,
+    1.0f
     };
 
     constexpr float skyDistance = 90.0f;
@@ -187,7 +197,9 @@ void WorldRenderer::DrawNightSky(const XMMATRIX& viewProjection)
         XMFLOAT4(0.005f, 0.008f, 0.020f, 0.42f),
         XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
         mApp->mRenderer.mWhiteTextureView.Get(),
-        1.0f
+       XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f),
+    1.0f,
+    1.0f
     };
 
     mApp->mRenderer.SetAlphaBlendingEnabled(true);
@@ -269,7 +281,9 @@ void WorldRenderer::DrawMoon(const XMMATRIX& viewProjection)
 
         mApp->mRenderer.mMoonSRV.Get(),
 
-        0.81f
+    XMFLOAT4(0.10f, 0.10f, 0.12f, 0.3f),
+    32.0f,
+    0.81f
     };
 
     Material moonGlowMaterial =
@@ -283,8 +297,9 @@ void WorldRenderer::DrawMoon(const XMMATRIX& viewProjection)
         XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
 
         mApp->mRenderer.mSoftGlowSRV.Get(),
-
-        1.0f
+            XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f),
+    1.0f,
+    1.0f
     };
 
 	constexpr float moonScaleX = 2.05f;
@@ -335,7 +350,9 @@ void WorldRenderer::DrawImportedScene(const XMMATRIX& viewProjection)
         XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
         XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
         nullptr,
-        0.0f
+         XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
+    32.0f,
+    0.0f
     };
 
     XMMATRIX sceneWorld =
@@ -365,7 +382,10 @@ void WorldRenderer::DrawPlayer(const XMMATRIX& viewProjection)
     {
         XMFLOAT4(0.95f, 0.85f, 0.20f, 1.0f),
         XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
-        mApp->mRenderer.mDiffuseTextureView.Get()
+        mApp->mRenderer.mDiffuseTextureView.Get(),
+        XMFLOAT4(0.25f, 0.25f, 0.20f, 1.0f),
+    32.0f,
+    0.0f
     };
 
     XMMATRIX scale = XMMatrixScaling(

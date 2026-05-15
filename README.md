@@ -27,63 +27,52 @@ The long-term vision is to create a scene that feels like a real game space rath
 The project will continue to grow through small playable milestones.
 
 ---
-## Milestone 18 — Multi-Material OBJ Scene Pipeline
+---
 
-Milestone 18 upgraded the imported OBJ scene pipeline from a single global material into a real multi-material scene renderer.
+## Milestone 19 — Material Quality, Filtering, and Override Pipeline
+
+Milestone 19 improved the material pipeline for imported OBJ scenes and prepared the renderer for higher-quality real 3D assets.
+
+Before this milestone, the imported scene could render multiple materials, but the material system still needed better filtering, per-material tuning, and stronger lighting behavior.
 
 ### Goal
 
-Allow one Blender-authored OBJ scene to contain multiple materials and render each material correctly in DirectX.
+Improve imported material quality and make the Blender-to-Direct3D asset workflow cleaner.
 
-Before this milestone, the imported scene used one diffuse texture for the whole OBJ. That was enough to prove the Milestone 17 texture pipeline, but it was not enough for a real scene with stone, water, mountains, wood, and future magical doorway materials.
-
-### Completed
-
-- Cleaned the exported `.mtl` texture path so the material file can use a project-relative texture reference instead of an absolute local Windows path.
-- Added CPU-side material data structures:
-  - `ObjMaterialData`
-  - `SubmeshData`
-- Updated `MeshData` to store:
-  - vertices
-  - indices
-  - material list
-  - submesh ranges
-- Replaced the first-pass MTL parser with a fuller material table parser.
-- Added support for:
-  - `newmtl`
-  - `Kd`
-  - `map_Kd`
-- Added `usemtl` parsing in the OBJ loader.
-- Added submesh range generation based on material switches in the OBJ file.
-- Added GPU-side material and submesh structures:
-  - `GpuMaterial`
-  - `GpuSubmesh`
-- Updated `GpuMesh` to store:
-  - GPU vertex/index buffers
-  - material list
-  - submesh list
-- Updated renderer material loading so each OBJ material can load its own diffuse texture.
-- Updated imported mesh drawing to render by submesh:
-  - bind submesh material
-  - bind diffuse texture if available
-  - fall back to white texture and `Kd` diffuse color if no texture exists
-  - call `DrawIndexed` for each submesh range
-- Created a Blender multi-material test scene with separate materials for:
-  - marble/stone porch and temple
-  - blue waterfall blockout
-  - dark mountain rock blockout
-- Exported the scene as OBJ/MTL.
-- Confirmed the DirectX renderer can render different materials from one imported OBJ scene.
-
-### Current Pipeline
+The project now keeps Blender-exported files clean:
 
 ```text
-Blender scene
--> OBJ export
--> MTL material table
--> newmtl / Kd / map_Kd
--> OBJ usemtl ranges
--> CPU MeshData materials + submeshes
--> GPU materials + submeshes
--> per-submesh DrawIndexed
--> rendered multi-material scene
+Blender exports:
+OBJ / MTL
+
+Doorways owns:
+DMAT material override files
+
+Blender OBJ
+-> geometry
+-> material assignments with usemtl
+
+Blender MTL
+-> Kd diffuse color
+-> Ks specular color
+-> Ns specular power
+-> map_Kd diffuse texture
+
+Doorways DMAT
+-> tex_scale
+-> specular_strength
+
+ObjLoader
+-> combines MTL + DMAT into ObjMaterialData
+
+Renderer
+-> converts ObjMaterialData into GpuMaterial
+-> loads one diffuse texture per material
+-> draws each submesh with its assigned material
+
+HLSL
+-> applies texture tiling
+-> ambient lighting
+-> diffuse lighting
+-> specular lighting
+-> emissive override

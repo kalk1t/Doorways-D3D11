@@ -130,6 +130,8 @@ bool App::Initialize()
         return false;
     }
 
+    UpdateWindowTitle();
+
     return true;
 }
 
@@ -233,15 +235,65 @@ bool App::InitWindow()
 
 void App::UpdateWindowTitle()
 {
+    const wchar_t* filterName =
+        mRenderer.mUsePointSamplerForDebug
+        ? L"Point Debug"
+        : L"Anisotropic";
+
+    std::wstring title = L"Doorways: Playable 3D Scene | Filter: ";
+    title += filterName;
+
     SetWindowTextW(
         mMainWindow,
-        L"Doorways: Playable 3D Scene");
+        title.c_str());
 }
 
 void App::Update(float deltaTime)
 {
 	mWorld.SceneTime += deltaTime;
 	mPlayerController.Update(mWorld, deltaTime);
+
+    if (mFilterToggleCooldown > 0.0f)
+    {
+        mFilterToggleCooldown -= deltaTime;
+
+        if (mFilterToggleCooldown < 0.0f)
+        {
+            mFilterToggleCooldown = 0.0f;
+        }
+    }
+
+    bool isFilterToggleKeyDown =
+        (GetAsyncKeyState('F') & 0x8000) != 0;
+
+    if (isFilterToggleKeyDown &&
+        !mWasFilterToggleKeyDown &&
+        mFilterToggleCooldown <= 0.0f)
+    {
+        mRenderer.mUsePointSamplerForDebug =
+            !mRenderer.mUsePointSamplerForDebug;
+
+        if (mRenderer.mUsePointSamplerForDebug)
+        {
+            OutputDebugStringA("Texture filtering: POINT debug sampler\n");
+        }
+        else
+        {
+            OutputDebugStringA("Texture filtering: ANISOTROPIC game sampler\n");
+        }
+
+        UpdateWindowTitle();
+
+        mFilterToggleCooldown = 0.25f;
+    }
+
+    mWasFilterToggleKeyDown = isFilterToggleKeyDown;
+
+
+
+
+
+
     if (GetAsyncKeyState(VK_ESCAPE) & 0x8000)
     {
         DestroyWindow(mMainWindow);
@@ -252,6 +304,12 @@ void App::Render()
 {
     EnvironmentSettings settings = 
         GetSceneSettings(mWorld.SceneTime);
+
+    settings.Lighting.CameraPosition = XMFLOAT4(
+        mWorld.MainCamera.Position.x,
+        mWorld.MainCamera.Position.y,
+        mWorld.MainCamera.Position.z,
+        1.0f);
 
     mRenderer.mImmediateContext->UpdateSubresource(
         mRenderer.mPerFrameConstantBuffer.Get(),
@@ -266,7 +324,6 @@ void App::Render()
 
     mRenderer.BindRenderPipeline();
 
-    XMVECTOR cameraPosition = XMLoadFloat3(&mWorld.MainCamera.Position);
     float aspectRatio = 
         static_cast<float>(mClientWidth) / static_cast<float>(mClientHeight);
     XMMATRIX viewProjection = 

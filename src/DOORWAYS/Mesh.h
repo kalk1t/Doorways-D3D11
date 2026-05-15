@@ -12,7 +12,25 @@ struct ObjMaterialData
     std::string Name;
     std::string DiffuseTexturePath;
 
-    XMFLOAT4 DiffuseColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+    DirectX::XMFLOAT4 DiffuseColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+
+    // x = specular red
+    // y = specular green
+    // z = specular blue
+    // w = specular strength multiplier
+    DirectX::XMFLOAT4 SpecularColor = DirectX::XMFLOAT4(0.25f, 0.25f, 0.25f, 1.0f);
+
+    // Higher value = smaller, sharper highlight.
+    // Lower value = wider, softer highlight.
+    float SpecularPower = 32.0f;
+
+    // x = U tiling scale
+    // y = V tiling scale
+    // z/w reserved for future texture offset or extra material data
+    DirectX::XMFLOAT4 TexTransform = DirectX::XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f);
+
+    // True when a custom Doorways material(.dmat) override provides texture scale.
+    bool HasMaterialOverrideTexTransform = false;
 };
 
 struct SubmeshData
@@ -28,10 +46,6 @@ struct MeshData
     std::vector<unsigned int> Indices;
 
 
-    // First simple material support.
-    // For now we support one diffuse texture for the whole OBJ.
-    std::string DiffuseTexturePath;
-
     // Full OBJ material/submesh data.
     std::vector<ObjMaterialData> Materials;
     std::vector<SubmeshData> Submeshes;
@@ -39,7 +53,22 @@ struct MeshData
 
 struct GpuMaterial
 {
-    XMFLOAT4 DiffuseColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+    DirectX::XMFLOAT4 DiffuseColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+
+    // x = specular red
+    // y = specular green
+    // z = specular blue
+    // w = specular strength multiplier
+    DirectX::XMFLOAT4 SpecularColor = DirectX::XMFLOAT4(0.25f, 0.25f, 0.25f, 1.0f);
+
+    // Higher value = smaller, sharper highlight.
+    // Lower value = wider, softer highlight.
+    float SpecularPower = 32.0f;
+
+    // x = U tiling scale
+    // y = V tiling scale
+    // z/w reserved for future texture offset or extra material data
+    DirectX::XMFLOAT4 TexTransform = DirectX::XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f);
 
     Microsoft::WRL::ComPtr<ID3D11Resource> DiffuseTexture;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> DiffuseSRV;

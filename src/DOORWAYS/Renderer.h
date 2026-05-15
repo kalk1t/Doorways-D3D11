@@ -13,6 +13,11 @@ struct Material
     XMFLOAT4 TexTransform;
     ID3D11ShaderResourceView* DiffuseMap;
 
+    // xyz = specular color
+    // w   = specular strength multiplier
+    XMFLOAT4 SpecularColor = XMFLOAT4(0.25f, 0.25f, 0.25f, 1.0f);
+
+    float SpecularPower = 32.0f;
     float EmissiveStrength = 0.0f;
 };
 
@@ -107,7 +112,15 @@ public:
     Microsoft::WRL::ComPtr<ID3D11Texture2D> mDiffuseTexture;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> mDiffuseTextureView;
 
-    Microsoft::WRL::ComPtr<ID3D11SamplerState> mSamplerState;
+    // Main texture sampler used by the game.
+    Microsoft::WRL::ComPtr<ID3D11SamplerState> mAnisotropicSamplerState;
+
+    // Debug sampler used to compare against old point filtering.
+    Microsoft::WRL::ComPtr<ID3D11SamplerState> mPointSamplerState;
+
+    // When true, the renderer uses point filtering so we can compare
+    // old blocky texture filtering against the new anisotropic filtering.
+    bool mUsePointSamplerForDebug = false;
 
 	//Textures for .jpg loading
     //
@@ -130,6 +143,4 @@ public:
 
     
 	GpuMesh mPrimarySceneMesh;
-    Microsoft::WRL::ComPtr<ID3D11Resource> mPrimarySceneTexture;
-    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> mPrimarySceneSRV;
 };

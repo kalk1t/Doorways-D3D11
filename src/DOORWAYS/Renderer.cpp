@@ -21,6 +21,28 @@ using namespace DirectX;
 using namespace std;
 
 
+XMFLOAT4 GetFallbackTexTransformForMaterialName(const std::string& materialName) {
+    // Higher x/y values mean the texture repeats more often.
+    // Lower x/y values mean the texture stretches larger.
+
+    if (materialName == "MAT_Polyhaven_Marble01")
+    {
+        return XMFLOAT4(4.0f, 4.0f, 0.0f, 0.0f);
+    }
+
+    if (materialName == "MAT_Mountain_Rock_Blockout")
+    {
+        return XMFLOAT4(8.0f, 4.0f, 0.0f, 0.0f);
+    }
+
+    if (materialName == "MAT_Water_Blockout")
+    {
+        return XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f);
+    }
+
+    return XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f);
+}
+
 bool CreateSolidColorTexture(
     ID3D11Device* device,
     std::uint8_t r,
@@ -958,30 +980,53 @@ bool Renderer::BuildTextures()
 
 bool Renderer::BuildSamplerState()
 {
-    D3D11_SAMPLER_DESC samplerDesc = {};
+    D3D11_SAMPLER_DESC anisotropicSamplerDesc = {};
 
-    samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+    // Main game sampler:
+    // Better for realistic 3D textures, especially floors, stairs,
+    // stone surfaces, mountains, and anything viewed from an angle.
+    anisotropicSamplerDesc.Filter = D3D11_FILTER_ANISOTROPIC;
 
-    samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-    samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-    samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+    anisotropicSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+    anisotropicSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+    anisotropicSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
 
-    samplerDesc.MipLODBias = 0.0f;
-    samplerDesc.MaxAnisotropy = 1;
+    anisotropicSamplerDesc.MipLODBias = 0.0f;
 
-    samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+    // 8 is a strong quality setting without being extreme.
+    // Direct3D 11 allows up to 16.
+    anisotropicSamplerDesc.MaxAnisotropy = 8;
 
-    samplerDesc.BorderColor[0] = 0.0f;
-    samplerDesc.BorderColor[1] = 0.0f;
-    samplerDesc.BorderColor[2] = 0.0f;
-    samplerDesc.BorderColor[3] = 0.0f;
+    anisotropicSamplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
 
-    samplerDesc.MinLOD = 0.0f;
-    samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+    anisotropicSamplerDesc.BorderColor[0] = 0.0f;
+    anisotropicSamplerDesc.BorderColor[1] = 0.0f;
+    anisotropicSamplerDesc.BorderColor[2] = 0.0f;
+    anisotropicSamplerDesc.BorderColor[3] = 0.0f;
+
+    anisotropicSamplerDesc.MinLOD = 0.0f;
+    anisotropicSamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
 
     HRESULT hr = mDevice->CreateSamplerState(
-        &samplerDesc,
-        mSamplerState.GetAddressOf());
+        &anisotropicSamplerDesc,
+        mAnisotropicSamplerState.GetAddressOf());
+
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+
+    D3D11_SAMPLER_DESC pointSamplerDesc = anisotropicSamplerDesc;
+
+    // Debug comparison sampler:
+    // This is the old blocky sampler style.
+    pointSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+    pointSamplerDesc.MaxAnisotropy = 1;
+
+    hr = mDevice->CreateSamplerState(
+        &pointSamplerDesc,
+        mPointSamplerState.GetAddressOf());
 
     if (FAILED(hr))
     {
@@ -1049,9 +1094,14 @@ void Renderer::BindRenderPipeline()
         1,
         perFrameBuffers);
 
+    ID3D11SamplerState* activeSampler =
+        mUsePointSamplerForDebug
+        ? mPointSamplerState.Get()
+        : mAnisotropicSamplerState.Get();
+
     ID3D11SamplerState* samplers[] =
     {
-        mSamplerState.Get()
+        activeSampler
     };
 
     mImmediateContext->PSSetSamplers(
@@ -1185,7 +1235,9 @@ void Renderer::DrawBox(
 
     perObjectData.MaterialDiffuse = material.Diffuse;
     perObjectData.TexTransform = material.TexTransform;
-	perObjectData.EmissiveStrength = material.EmissiveStrength;
+    perObjectData.MaterialSpecular = material.SpecularColor;
+    perObjectData.SpecularPower = material.SpecularPower;
+    perObjectData.EmissiveStrength = material.EmissiveStrength;
 
     mImmediateContext->UpdateSubresource(
         mPerObjectConstantBuffer.Get(),
@@ -1255,6 +1307,8 @@ void Renderer::DrawSphere(
 
     perObjectData.MaterialDiffuse = material.Diffuse;
     perObjectData.TexTransform = material.TexTransform;
+    perObjectData.MaterialSpecular = material.SpecularColor;
+    perObjectData.SpecularPower = material.SpecularPower;
     perObjectData.EmissiveStrength = material.EmissiveStrength;
 
     mImmediateContext->UpdateSubresource(
@@ -1357,6 +1411,51 @@ bool Renderer::CreateGpuMesh(
     {
         GpuMaterial gpuMaterial = {};
         gpuMaterial.DiffuseColor = sourceMaterial.DiffuseColor;
+        gpuMaterial.SpecularColor = sourceMaterial.SpecularColor;
+        gpuMaterial.SpecularPower = sourceMaterial.SpecularPower;
+
+
+// DMAT overrides are the preferred source for Doorways material tuning.
+// Name-based values are only fallback safety defaults.
+        if (sourceMaterial.HasMaterialOverrideTexTransform)
+        {
+            gpuMaterial.TexTransform = sourceMaterial.TexTransform;
+        }
+        else
+        {
+            gpuMaterial.TexTransform =
+                GetFallbackTexTransformForMaterialName(sourceMaterial.Name);
+        }
+
+        OutputDebugStringA("Material tex scale: ");
+        OutputDebugStringA(sourceMaterial.Name.c_str());
+        OutputDebugStringA(" -> ");
+        OutputDebugStringA(std::to_string(gpuMaterial.TexTransform.x).c_str());
+        OutputDebugStringA(", ");
+        OutputDebugStringA(std::to_string(gpuMaterial.TexTransform.y).c_str());
+
+        if (sourceMaterial.HasMaterialOverrideTexTransform)
+        {
+            OutputDebugStringA(" [override]\n");
+        }
+        else
+        {
+            OutputDebugStringA(" [fallback]\n");
+        }
+
+        OutputDebugStringA("Material specular: ");
+        OutputDebugStringA(sourceMaterial.Name.c_str());
+        OutputDebugStringA(" | Ks = ");
+        OutputDebugStringA(std::to_string(gpuMaterial.SpecularColor.x).c_str());
+        OutputDebugStringA(", ");
+        OutputDebugStringA(std::to_string(gpuMaterial.SpecularColor.y).c_str());
+        OutputDebugStringA(", ");
+        OutputDebugStringA(std::to_string(gpuMaterial.SpecularColor.z).c_str());
+        OutputDebugStringA(" | Strength = ");
+        OutputDebugStringA(std::to_string(gpuMaterial.SpecularColor.w).c_str());
+        OutputDebugStringA(" | Ns = ");
+        OutputDebugStringA(std::to_string(gpuMaterial.SpecularPower).c_str());
+        OutputDebugStringA("\n");
 
         if (!sourceMaterial.DiffuseTexturePath.empty())
         {
@@ -1504,8 +1603,11 @@ void Renderer::DrawMesh(
             XMStoreFloat4x4(
                 &perObjectData.WorldInvTranspose,
                 worldInverseTranspose);
-
             XMFLOAT4 diffuseColor = material.Diffuse;
+            XMFLOAT4 texTransform = material.TexTransform;
+
+            XMFLOAT4 specularColor = material.SpecularColor;
+            float specularPower = material.SpecularPower;
 
             ID3D11ShaderResourceView* textureView = material.DiffuseMap;
 
@@ -1515,6 +1617,21 @@ void Renderer::DrawMesh(
                 diffuseColor.y *= gpuMaterial->DiffuseColor.y;
                 diffuseColor.z *= gpuMaterial->DiffuseColor.z;
                 diffuseColor.w *= gpuMaterial->DiffuseColor.w;
+
+                specularColor.x *= gpuMaterial->SpecularColor.x;
+                specularColor.y *= gpuMaterial->SpecularColor.y;
+                specularColor.z *= gpuMaterial->SpecularColor.z;
+                specularColor.w *= gpuMaterial->SpecularColor.w;
+
+                specularPower = gpuMaterial->SpecularPower;
+
+                // Combine global draw tiling with the imported material tiling.
+                texTransform.x *= gpuMaterial->TexTransform.x;
+                texTransform.y *= gpuMaterial->TexTransform.y;
+
+                // z/w are reserved for future UV offset support.
+                texTransform.z += gpuMaterial->TexTransform.z;
+                texTransform.w += gpuMaterial->TexTransform.w;
 
                 if (gpuMaterial->DiffuseSRV)
                 {
@@ -1528,7 +1645,7 @@ void Renderer::DrawMesh(
             }
 
             perObjectData.MaterialDiffuse = diffuseColor;
-            perObjectData.TexTransform = material.TexTransform;
+            perObjectData.TexTransform = texTransform;
             perObjectData.EmissiveStrength = material.EmissiveStrength;
 
             mImmediateContext->UpdateSubresource(
@@ -1605,41 +1722,6 @@ bool Renderer::LoadStaticMesh(
         OutputDebugStringA("\n");
 
         return false;
-    }
-
-    if (!meshData.DiffuseTexturePath.empty())
-    {
-        std::wstring texturePathWide(
-            meshData.DiffuseTexturePath.begin(),
-            meshData.DiffuseTexturePath.end());
-
-        HRESULT hr = CreateWICTextureFromFile(
-            mDevice.Get(),
-            texturePathWide.c_str(),
-            mPrimarySceneTexture.GetAddressOf(),
-            mPrimarySceneSRV.GetAddressOf());
-
-        if (FAILED(hr))
-        {
-            OutputDebugStringA("Failed to load OBJ diffuse texture:\n");
-            OutputDebugStringA(meshData.DiffuseTexturePath.c_str());
-            OutputDebugStringA("\n");
-
-            // Do not fail the whole mesh load yet.
-            // Geometry can still render with white fallback.
-            mPrimarySceneTexture.Reset();
-            mPrimarySceneSRV.Reset();
-        }
-        else
-        {
-            OutputDebugStringA("Loaded OBJ diffuse texture:\n");
-            OutputDebugStringA(meshData.DiffuseTexturePath.c_str());
-            OutputDebugStringA("\n");
-        }
-    }
-    else
-    {
-        OutputDebugStringA("OBJ loaded with no diffuse texture path.\n");
     }
 
     return true;

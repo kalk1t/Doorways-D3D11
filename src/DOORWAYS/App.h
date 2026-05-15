@@ -43,6 +43,9 @@ private:
     int mClientWidth = 1280;
     int mClientHeight = 720;
 
+    bool mWasFilterToggleKeyDown = false;
+    float mFilterToggleCooldown = 0.0f;
+
 public:
 
     Renderer mRenderer;

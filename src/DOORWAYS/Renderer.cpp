@@ -1499,7 +1499,7 @@ bool Renderer::LoadStaticMesh(
 bool Renderer::BuildAssetMeshes()
 {
     if (!LoadStaticMesh(
-        "..\\..\\assets\\models\\exports\\primary_scene_01.obj",
+        "..\\..\\assets\\models\\exports\\ancient_greek_scene.obj",
         mPrimarySceneMesh))
     {
         return false;

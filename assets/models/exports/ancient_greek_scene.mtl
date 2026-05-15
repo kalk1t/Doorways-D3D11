@@ -1,0 +1,22 @@
+# Blender 5.1.1 MTL File: 'Doorways_Milestone16_AncientGreekPorch.blend'
+# www.blender.org
+
+newmtl MAT_Ancient_Limestone_Blockout
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.263274 0.214018 0.132875
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+
+newmtl MAT_Blckout_Water
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.083943 0.052497 0.800023
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2

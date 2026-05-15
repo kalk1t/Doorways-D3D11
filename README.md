@@ -27,33 +27,45 @@ The long-term vision is to create a scene that feels like a real game space rath
 The project will continue to grow through small playable milestones.
 
 ---
+## Milestone 16 — Ancient Greek Porch and Temple Foundation
 
-## Milestone 13 — Blender Primary Scene Pipeline
+Milestone 16 replaced the simple blockout porch and temple with a stronger ancient Greek architectural foundation.
 
-This milestone introduced the first Blender-authored scene pipeline for Doorways.
 
 ### Completed
 
-- Created `Doorways_PrimaryScene.blend` as the master Blender scene file.
-- Established Blender-to-engine coordinate conventions.
-- Built the first primary blockout scene:
-  - porch platform
-  - railings and posts
-  - nine stairs
-  - raised temple landing
-  - temple body, roof, and columns
-  - surrounding mountain placeholders
-  - waterfall placeholder
-- Exported a single test cube from Blender as OBJ.
-- Loaded the exported OBJ successfully in the DirectX engine.
-- Exported the full primary blockout scene as OBJ.
-- Confirmed the full scene renders correctly in-engine.
+- Replaced the single porch floor block with individual ancient stone slabs.
+- Added a low stone trim/parapet around the porch platform.
+- Preserved the center stair opening toward the temple.
+- Replaced the simple stair blocks with wider ceremonial stone steps.
+- Added stair cheek walls on both sides of the stairway.
+- Replaced square porch posts with simple Greek-style columns:
+  - base blocks
+  - cylindrical shafts
+  - capital blocks
+  - collar accents
+- Added additional porch trim details:
+  - platform base
+  - top cap stones
+  - front decorative band
+- Replaced the old temple blockout with a clearer ancient Greek temple structure:
+  - landing platform
+  - cella/main chamber
+  - front and back colonnades
+  - entablature beams
+  - roof block
+  - triangular pediments
+- Exported the updated scene from Blender as OBJ.
+- Loaded and rendered the Milestone 16 scene successfully in the DirectX engine.
+
+### Current Visual Direction
+
+The environment now follows an ancient Greek architectural style. The porch and temple are designed as a connected stone ceremonial approach rather than a modern wooden porch.
 
 ### Pipeline Confirmed
 
-The project can now use Blender as a 3D scene authoring tool and export OBJ files into the custom DirectX renderer.
-
-Current pipeline:
-
 ```text
-Blender scene -> OBJ export -> DirectX OBJ loader -> rendered scene
+Blender ancient Greek scene
+-> OBJ export
+-> DirectX OBJ loader
+-> rendered scene

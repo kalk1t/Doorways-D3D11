@@ -1348,6 +1348,69 @@ bool Renderer::CreateGpuMesh(
 
     outMesh.IndexCount = static_cast<unsigned int>(meshData.Indices.size());
 
+    // Copy CPU material data into GPU material slots.
+    // Texture SRVs will be loaded in a later step.
+    outMesh.Materials.clear();
+    outMesh.Materials.reserve(meshData.Materials.size());
+
+    for (const ObjMaterialData& sourceMaterial : meshData.Materials)
+    {
+        GpuMaterial gpuMaterial = {};
+        gpuMaterial.DiffuseColor = sourceMaterial.DiffuseColor;
+
+        if (!sourceMaterial.DiffuseTexturePath.empty())
+        {
+            std::wstring texturePathWide(
+                sourceMaterial.DiffuseTexturePath.begin(),
+                sourceMaterial.DiffuseTexturePath.end());
+
+            HRESULT textureHr = CreateWICTextureFromFile(
+                mDevice.Get(),
+                texturePathWide.c_str(),
+                gpuMaterial.DiffuseTexture.GetAddressOf(),
+                gpuMaterial.DiffuseSRV.GetAddressOf());
+
+            if (FAILED(textureHr))
+            {
+                OutputDebugStringA("Failed to load material diffuse texture:\n");
+                OutputDebugStringA(sourceMaterial.DiffuseTexturePath.c_str());
+                OutputDebugStringA("\n");
+            }
+            else
+            {
+                OutputDebugStringA("Loaded material diffuse texture:\n");
+                OutputDebugStringA(sourceMaterial.Name.c_str());
+                OutputDebugStringA(" -> ");
+                OutputDebugStringA(sourceMaterial.DiffuseTexturePath.c_str());
+                OutputDebugStringA("\n");
+            }
+        }
+
+        outMesh.Materials.push_back(gpuMaterial);
+    }
+
+    // Copy CPU submesh ranges into GPU submesh ranges.
+    outMesh.Submeshes.clear();
+    outMesh.Submeshes.reserve(meshData.Submeshes.size());
+
+    for (const SubmeshData& sourceSubmesh : meshData.Submeshes)
+    {
+        GpuSubmesh gpuSubmesh = {};
+        gpuSubmesh.StartIndex = sourceSubmesh.StartIndex;
+        gpuSubmesh.IndexCount = sourceSubmesh.IndexCount;
+        gpuSubmesh.MaterialIndex = sourceSubmesh.MaterialIndex;
+
+        outMesh.Submeshes.push_back(gpuSubmesh);
+    }
+
+    OutputDebugStringA("GPU materials copied: ");
+    OutputDebugStringA(std::to_string(outMesh.Materials.size()).c_str());
+    OutputDebugStringA("\n");
+
+    OutputDebugStringA("GPU submeshes copied: ");
+    OutputDebugStringA(std::to_string(outMesh.Submeshes.size()).c_str());
+    OutputDebugStringA("\n");
+
     return true;
 }
 
@@ -1367,32 +1430,6 @@ void Renderer::DrawMesh(
 
     XMMATRIX worldInverseTranspose =
         XMMatrixTranspose(XMMatrixInverse(nullptr, world));
-
-    PerObjectConstantBuffer perObjectData = {};
-
-    XMStoreFloat4x4(
-        &perObjectData.WorldViewProj,
-        worldViewProjection);
-
-    XMStoreFloat4x4(
-        &perObjectData.World,
-        world);
-
-    XMStoreFloat4x4(
-        &perObjectData.WorldInvTranspose,
-        worldInverseTranspose);
-
-    perObjectData.MaterialDiffuse = material.Diffuse;
-    perObjectData.TexTransform = material.TexTransform;
-    perObjectData.EmissiveStrength = material.EmissiveStrength;
-
-    mImmediateContext->UpdateSubresource(
-        mPerObjectConstantBuffer.Get(),
-        0,
-        nullptr,
-        &perObjectData,
-        0,
-        0);
 
     ID3D11Buffer* vertexBuffers[] =
     {
@@ -1451,22 +1488,99 @@ void Renderer::DrawMesh(
         1,
         perObjectConstantBuffers);
 
-    ID3D11ShaderResourceView* textureView = material.DiffuseMap;
+    auto drawRange =
+        [&](unsigned int startIndex, unsigned int indexCount, const GpuMaterial* gpuMaterial)
+        {
+            PerObjectConstantBuffer perObjectData = {};
 
-    if (textureView == nullptr)
+            XMStoreFloat4x4(
+                &perObjectData.WorldViewProj,
+                worldViewProjection);
+
+            XMStoreFloat4x4(
+                &perObjectData.World,
+                world);
+
+            XMStoreFloat4x4(
+                &perObjectData.WorldInvTranspose,
+                worldInverseTranspose);
+
+            XMFLOAT4 diffuseColor = material.Diffuse;
+
+            ID3D11ShaderResourceView* textureView = material.DiffuseMap;
+
+            if (gpuMaterial != nullptr)
+            {
+                diffuseColor.x *= gpuMaterial->DiffuseColor.x;
+                diffuseColor.y *= gpuMaterial->DiffuseColor.y;
+                diffuseColor.z *= gpuMaterial->DiffuseColor.z;
+                diffuseColor.w *= gpuMaterial->DiffuseColor.w;
+
+                if (gpuMaterial->DiffuseSRV)
+                {
+                    textureView = gpuMaterial->DiffuseSRV.Get();
+                }
+            }
+
+            if (textureView == nullptr)
+            {
+                textureView = mWhiteTextureView.Get();
+            }
+
+            perObjectData.MaterialDiffuse = diffuseColor;
+            perObjectData.TexTransform = material.TexTransform;
+            perObjectData.EmissiveStrength = material.EmissiveStrength;
+
+            mImmediateContext->UpdateSubresource(
+                mPerObjectConstantBuffer.Get(),
+                0,
+                nullptr,
+                &perObjectData,
+                0,
+                0);
+
+            mImmediateContext->PSSetShaderResources(
+                0,
+                1,
+                &textureView);
+
+            mImmediateContext->DrawIndexed(
+                indexCount,
+                startIndex,
+                0);
+        };
+
+    if (!mesh.Submeshes.empty())
     {
-        textureView = mWhiteTextureView.Get();
+        for (const GpuSubmesh& submesh : mesh.Submeshes)
+        {
+            if (submesh.IndexCount == 0)
+            {
+                continue;
+            }
+
+            const GpuMaterial* gpuMaterial = nullptr;
+
+            if (submesh.MaterialIndex >= 0 &&
+                static_cast<size_t>(submesh.MaterialIndex) < mesh.Materials.size())
+            {
+                gpuMaterial = &mesh.Materials[static_cast<size_t>(submesh.MaterialIndex)];
+            }
+
+            drawRange(
+                submesh.StartIndex,
+                submesh.IndexCount,
+                gpuMaterial);
+        }
+
+        return;
     }
 
-    mImmediateContext->PSSetShaderResources(
+    // Fallback for older meshes with no submesh data.
+    drawRange(
         0,
-        1,
-        &textureView);
-
-    mImmediateContext->DrawIndexed(
         mesh.IndexCount,
-        0,
-        0);
+        nullptr);
 }
 
 bool Renderer::LoadStaticMesh(
@@ -1534,7 +1648,7 @@ bool Renderer::LoadStaticMesh(
 bool Renderer::BuildAssetMeshes()
 {
     if (!LoadStaticMesh(
-        "..\\..\\assets\\models\\exports\\milestone17_textured_greek_scene.obj",
+        "..\\..\\assets\\models\\exports\\milestone18_multimaterial_scene.obj",
         mPrimarySceneMesh))
     {
         return false;

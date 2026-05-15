@@ -332,11 +332,9 @@ void WorldRenderer::DrawImportedScene(const XMMATRIX& viewProjection)
 {
     Material sceneMaterial =
     {
-        XMFLOAT4(0.72f, 0.68f, 0.58f, 1.0f),
+        XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
         XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
-        mApp->mRenderer.mPrimarySceneSRV
-                ? mApp->mRenderer.mPrimarySceneSRV.Get()
-                : mApp->mRenderer.mWhiteTextureView.Get(),
+        nullptr,
         0.0f
     };
 

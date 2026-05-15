@@ -81,22 +81,51 @@ namespace
         return index > 0 && static_cast<size_t>(index) <= count;
     }
 
-    bool LoadFirstDiffuseTextureFromMtl(
-        const std::filesystem::path& mtlPath,
-        std::string& outDiffuseTexturePath)
+    std::string TrimWhitespace(const std::string& text)
     {
+        const size_t first = text.find_first_not_of(" \t\r\n");
+
+        if (first == std::string::npos)
+        {
+            return "";
+        }
+
+        const size_t last = text.find_last_not_of(" \t\r\n");
+
+        return text.substr(first, last - first + 1);
+    }
+
+    bool LoadMaterialsFromMtl(
+        const std::filesystem::path& mtlPath,
+        std::vector<ObjMaterialData>& outMaterials)
+    {
+        outMaterials.clear();
+
         std::ifstream mtlFile(mtlPath);
 
         if (!mtlFile.is_open())
         {
+            OutputDebugStringA("Failed to open MTL file:\n");
+            OutputDebugStringA(mtlPath.string().c_str());
+            OutputDebugStringA("\n");
+
             return false;
         }
+
+        ObjMaterialData* currentMaterial = nullptr;
 
         std::string line;
 
         while (std::getline(mtlFile, line))
         {
+            line = TrimWhitespace(line);
+
             if (line.empty())
+            {
+                continue;
+            }
+
+            if (line[0] == '#')
             {
                 continue;
             }
@@ -106,20 +135,57 @@ namespace
             std::string command;
             lineStream >> command;
 
-            if (command == "map_Kd")
+            if (command == "newmtl")
             {
+                std::string materialName;
+                std::getline(lineStream, materialName);
+
+                materialName = TrimWhitespace(materialName);
+
+                if (materialName.empty())
+                {
+                    continue;
+                }
+
+                ObjMaterialData material = {};
+                material.Name = materialName;
+                material.DiffuseColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+
+                outMaterials.push_back(material);
+                currentMaterial = &outMaterials.back();
+            }
+            else if (command == "Kd")
+            {
+                if (currentMaterial == nullptr)
+                {
+                    continue;
+                }
+
+                float r = 1.0f;
+                float g = 1.0f;
+                float b = 1.0f;
+
+                if (lineStream >> r >> g >> b)
+                {
+                    currentMaterial->DiffuseColor = XMFLOAT4(r, g, b, 1.0f);
+                }
+            }
+            else if (command == "map_Kd")
+            {
+                if (currentMaterial == nullptr)
+                {
+                    continue;
+                }
+
                 std::string texturePathText;
                 std::getline(lineStream, texturePathText);
 
-                // Remove leading spaces after map_Kd.
-                size_t firstNonSpace = texturePathText.find_first_not_of(" \t");
+                texturePathText = TrimWhitespace(texturePathText);
 
-                if (firstNonSpace == std::string::npos)
+                if (texturePathText.empty())
                 {
-                    return false;
+                    continue;
                 }
-
-                texturePathText = texturePathText.substr(firstNonSpace);
 
                 std::filesystem::path texturePath = texturePathText;
 
@@ -130,14 +196,12 @@ namespace
 
                 texturePath = texturePath.lexically_normal();
 
-                outDiffuseTexturePath = texturePath.string();
-                return true;
+                currentMaterial->DiffuseTexturePath = texturePath.string();
             }
         }
 
-        return false;
+        return !outMaterials.empty();
     }
-
 
     std::string MakeVertexKeyString(const ObjVertexKey& key)
     {
@@ -147,6 +211,41 @@ namespace
             std::to_string(key.NormalIndex);
     }
 
+    int FindMaterialIndexByName(
+        const std::vector<ObjMaterialData>& materials,
+        const std::string& materialName)
+    {
+        for (size_t i = 0; i < materials.size(); ++i)
+        {
+            if (materials[i].Name == materialName)
+            {
+                return static_cast<int>(i);
+            }
+        }
+
+        return -1;
+    }
+
+    void CloseCurrentSubmeshIfNeeded(
+        MeshData& meshData,
+        unsigned int submeshStartIndex,
+        int materialIndex)
+    {
+        const unsigned int currentIndexCount =
+            static_cast<unsigned int>(meshData.Indices.size());
+
+        if (currentIndexCount <= submeshStartIndex)
+        {
+            return;
+        }
+
+        SubmeshData submesh = {};
+        submesh.StartIndex = submeshStartIndex;
+        submesh.IndexCount = currentIndexCount - submeshStartIndex;
+        submesh.MaterialIndex = materialIndex;
+
+        meshData.Submeshes.push_back(submesh);
+    }
 
 }
 
@@ -173,6 +272,9 @@ bool ObjLoader::LoadFromFile(
 
     std::filesystem::path objPath = filePath;
     std::filesystem::path objDirectory = objPath.parent_path();
+
+    int currentMaterialIndex = -1;
+    unsigned int currentSubmeshStartIndex = 0;
 
     while (std::getline(file, line))
     {
@@ -221,23 +323,43 @@ bool ObjLoader::LoadFromFile(
                 std::filesystem::path mtlPath = objDirectory / mtlFileName;
                 mtlPath = mtlPath.lexically_normal();
 
-                std::string diffuseTexturePath;
+                std::vector<ObjMaterialData> materials;
 
-                if (LoadFirstDiffuseTextureFromMtl(mtlPath, diffuseTexturePath))
+                if (LoadMaterialsFromMtl(mtlPath, materials))
                 {
-                    outMeshData.DiffuseTexturePath = diffuseTexturePath;
+                    outMeshData.Materials = materials;
 
-                    OutputDebugStringA("OBJ diffuse texture found: ");
-                    OutputDebugStringA(outMeshData.DiffuseTexturePath.c_str());
+                    OutputDebugStringA("OBJ MTL materials loaded: ");
+                    OutputDebugStringA(std::to_string(outMeshData.Materials.size()).c_str());
                     OutputDebugStringA("\n");
+
+                    // Milestone 17 compatibility:
+                    // Keep using the first material texture as the old single-scene texture.
+                    for (const ObjMaterialData& material : outMeshData.Materials)
+                    {
+                        OutputDebugStringA("  Material: ");
+                        OutputDebugStringA(material.Name.c_str());
+
+                        if (!material.DiffuseTexturePath.empty())
+                        {
+                            OutputDebugStringA(" | map_Kd: ");
+                            OutputDebugStringA(material.DiffuseTexturePath.c_str());
+
+                            if (outMeshData.DiffuseTexturePath.empty())
+                            {
+                                outMeshData.DiffuseTexturePath = material.DiffuseTexturePath;
+                            }
+                        }
+
+                        OutputDebugStringA("\n");
+                    }
                 }
                 else
                 {
-                    OutputDebugStringA("OBJ MTL loaded but no map_Kd diffuse texture found.\n");
+                    OutputDebugStringA("OBJ MTL loaded but no materials were parsed.\n");
                 }
             }
         }
-
         else if (command == "f")
         {
             std::vector<ObjVertexKey> faceVertices;
@@ -341,7 +463,73 @@ bool ObjLoader::LoadFromFile(
                 }
             }
         }
+        else if (command == "usemtl")
+        {
+            // Close the previous material range before switching materials.
+            CloseCurrentSubmeshIfNeeded(
+                outMeshData,
+                currentSubmeshStartIndex,
+                currentMaterialIndex);
+
+            currentSubmeshStartIndex =
+                static_cast<unsigned int>(outMeshData.Indices.size());
+
+            std::string materialName;
+            std::getline(lineStream, materialName);
+
+            materialName = TrimWhitespace(materialName);
+
+            currentMaterialIndex =
+                FindMaterialIndexByName(
+                    outMeshData.Materials,
+                    materialName);
+
+            if (currentMaterialIndex == -1 && !materialName.empty())
+            {
+                // Robust fallback:
+                // If OBJ references a material that was not found in the MTL,
+                // create a placeholder material so the submesh still has a valid material slot.
+                ObjMaterialData fallbackMaterial = {};
+                fallbackMaterial.Name = materialName;
+                fallbackMaterial.DiffuseColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+
+                outMeshData.Materials.push_back(fallbackMaterial);
+
+                currentMaterialIndex =
+                    static_cast<int>(outMeshData.Materials.size() - 1);
+            }
+
+            OutputDebugStringA("OBJ usemtl: ");
+            OutputDebugStringA(materialName.c_str());
+            OutputDebugStringA(" -> material index ");
+            OutputDebugStringA(std::to_string(currentMaterialIndex).c_str());
+            OutputDebugStringA("\n");
+}
+
+
+        //
     }
+
+
+    CloseCurrentSubmeshIfNeeded(
+        outMeshData,
+        currentSubmeshStartIndex,
+        currentMaterialIndex);
+
+    if (outMeshData.Submeshes.empty() && !outMeshData.Indices.empty())
+    {
+        SubmeshData fullMeshSubmesh = {};
+        fullMeshSubmesh.StartIndex = 0;
+        fullMeshSubmesh.IndexCount =
+            static_cast<unsigned int>(outMeshData.Indices.size());
+        fullMeshSubmesh.MaterialIndex = -1;
+
+        outMeshData.Submeshes.push_back(fullMeshSubmesh);
+    }
+
+    OutputDebugStringA("OBJ submeshes loaded: ");
+    OutputDebugStringA(std::to_string(outMeshData.Submeshes.size()).c_str());
+    OutputDebugStringA("\n");
 
     return
         !outMeshData.Vertices.empty() &&

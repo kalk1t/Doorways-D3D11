@@ -27,43 +27,63 @@ The long-term vision is to create a scene that feels like a real game space rath
 The project will continue to grow through small playable milestones.
 
 ---
-## Milestone 17 — Ancient Stone Material / Texture Pipeline
+## Milestone 18 — Multi-Material OBJ Scene Pipeline
 
-Milestone 17 added the first working material and texture pipeline for Blender-authored OBJ scenes.
+Milestone 18 upgraded the imported OBJ scene pipeline from a single global material into a real multi-material scene renderer.
 
 ### Goal
 
-Move beyond flat blockout colors by applying a real stone/marble texture to the ancient Greek porch and temple scene.
+Allow one Blender-authored OBJ scene to contain multiple materials and render each material correctly in DirectX.
+
+Before this milestone, the imported scene used one diffuse texture for the whole OBJ. That was enough to prove the Milestone 17 texture pipeline, but it was not enough for a real scene with stone, water, mountains, wood, and future magical doorway materials.
 
 ### Completed
 
-- Added a Poly Haven marble/stone texture to the project asset folder.
-- Applied the marble material to the ancient Greek porch and temple in Blender.
-- Generated usable UV coordinates for the porch and temple geometry.
-- Exported the textured Blender scene as OBJ/MTL.
-- Confirmed that the OBJ file includes UV coordinates.
-- Confirmed that the MTL file references the diffuse texture through `map_Kd`.
-- Updated the file references the diffuse texture through `map_Kd`.
-- Updated the OBJ loading pipeline to read basic material information.
-- Added first-pass `.mtl` parsing support:
-  - reads `mtllib` from the OBJ file
-  - opens the referenced `.mtl` file
-  - finds the first `map_Kd` diffuse texture path
-  - resolves texture paths relative to the MTL file location
-- Updated the renderer to load the OBJ diffuse texture with `CreateWICTextureFromFile`.
-- Added a Shader Resource View for the imported primary scene texture.
-- Updated imported scene rendering to bind the loaded texture instead of always using the white fallback texture.
-- Confirmed the textured ancient Greek scene renders successfully in DirectX.
+- Cleaned the exported `.mtl` texture path so the material file can use a project-relative texture reference instead of an absolute local Windows path.
+- Added CPU-side material data structures:
+  - `ObjMaterialData`
+  - `SubmeshData`
+- Updated `MeshData` to store:
+  - vertices
+  - indices
+  - material list
+  - submesh ranges
+- Replaced the first-pass MTL parser with a fuller material table parser.
+- Added support for:
+  - `newmtl`
+  - `Kd`
+  - `map_Kd`
+- Added `usemtl` parsing in the OBJ loader.
+- Added submesh range generation based on material switches in the OBJ file.
+- Added GPU-side material and submesh structures:
+  - `GpuMaterial`
+  - `GpuSubmesh`
+- Updated `GpuMesh` to store:
+  - GPU vertex/index buffers
+  - material list
+  - submesh list
+- Updated renderer material loading so each OBJ material can load its own diffuse texture.
+- Updated imported mesh drawing to render by submesh:
+  - bind submesh material
+  - bind diffuse texture if available
+  - fall back to white texture and `Kd` diffuse color if no texture exists
+  - call `DrawIndexed` for each submesh range
+- Created a Blender multi-material test scene with separate materials for:
+  - marble/stone porch and temple
+  - blue waterfall blockout
+  - dark mountain rock blockout
+- Exported the scene as OBJ/MTL.
+- Confirmed the DirectX renderer can render different materials from one imported OBJ scene.
 
 ### Current Pipeline
 
 ```text
 Blender scene
 -> OBJ export
--> MTL material file
--> map_Kd diffuse texture
--> DirectX OBJ loader
--> WIC texture loader
--> ShaderResourceView
--> HLSL texture sampling
--> rendered textured scene
+-> MTL material table
+-> newmtl / Kd / map_Kd
+-> OBJ usemtl ranges
+-> CPU MeshData materials + submeshes
+-> GPU materials + submeshes
+-> per-submesh DrawIndexed
+-> rendered multi-material scene

@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <filesystem>
 
 using namespace DirectX;
 
@@ -80,6 +81,64 @@ namespace
         return index > 0 && static_cast<size_t>(index) <= count;
     }
 
+    bool LoadFirstDiffuseTextureFromMtl(
+        const std::filesystem::path& mtlPath,
+        std::string& outDiffuseTexturePath)
+    {
+        std::ifstream mtlFile(mtlPath);
+
+        if (!mtlFile.is_open())
+        {
+            return false;
+        }
+
+        std::string line;
+
+        while (std::getline(mtlFile, line))
+        {
+            if (line.empty())
+            {
+                continue;
+            }
+
+            std::istringstream lineStream(line);
+
+            std::string command;
+            lineStream >> command;
+
+            if (command == "map_Kd")
+            {
+                std::string texturePathText;
+                std::getline(lineStream, texturePathText);
+
+                // Remove leading spaces after map_Kd.
+                size_t firstNonSpace = texturePathText.find_first_not_of(" \t");
+
+                if (firstNonSpace == std::string::npos)
+                {
+                    return false;
+                }
+
+                texturePathText = texturePathText.substr(firstNonSpace);
+
+                std::filesystem::path texturePath = texturePathText;
+
+                if (texturePath.is_relative())
+                {
+                    texturePath = mtlPath.parent_path() / texturePath;
+                }
+
+                texturePath = texturePath.lexically_normal();
+
+                outDiffuseTexturePath = texturePath.string();
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+
     std::string MakeVertexKeyString(const ObjVertexKey& key)
     {
         return
@@ -87,6 +146,8 @@ namespace
             std::to_string(key.TexCoordIndex) + "/" +
             std::to_string(key.NormalIndex);
     }
+
+
 }
 
 bool ObjLoader::LoadFromFile(
@@ -109,6 +170,9 @@ bool ObjLoader::LoadFromFile(
     std::unordered_map<std::string, unsigned int> uniqueVertexMap;
 
     std::string line;
+
+    std::filesystem::path objPath = filePath;
+    std::filesystem::path objDirectory = objPath.parent_path();
 
     while (std::getline(file, line))
     {
@@ -147,6 +211,33 @@ bool ObjLoader::LoadFromFile(
 
             normals.push_back(normal);
         }
+        else if (command == "mtllib")
+        {
+            std::string mtlFileName;
+            lineStream >> mtlFileName;
+
+            if (!mtlFileName.empty())
+            {
+                std::filesystem::path mtlPath = objDirectory / mtlFileName;
+                mtlPath = mtlPath.lexically_normal();
+
+                std::string diffuseTexturePath;
+
+                if (LoadFirstDiffuseTextureFromMtl(mtlPath, diffuseTexturePath))
+                {
+                    outMeshData.DiffuseTexturePath = diffuseTexturePath;
+
+                    OutputDebugStringA("OBJ diffuse texture found: ");
+                    OutputDebugStringA(outMeshData.DiffuseTexturePath.c_str());
+                    OutputDebugStringA("\n");
+                }
+                else
+                {
+                    OutputDebugStringA("OBJ MTL loaded but no map_Kd diffuse texture found.\n");
+                }
+            }
+        }
+
         else if (command == "f")
         {
             std::vector<ObjVertexKey> faceVertices;

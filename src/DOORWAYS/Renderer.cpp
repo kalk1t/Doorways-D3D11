@@ -1493,13 +1493,48 @@ bool Renderer::LoadStaticMesh(
         return false;
     }
 
+    if (!meshData.DiffuseTexturePath.empty())
+    {
+        std::wstring texturePathWide(
+            meshData.DiffuseTexturePath.begin(),
+            meshData.DiffuseTexturePath.end());
+
+        HRESULT hr = CreateWICTextureFromFile(
+            mDevice.Get(),
+            texturePathWide.c_str(),
+            mPrimarySceneTexture.GetAddressOf(),
+            mPrimarySceneSRV.GetAddressOf());
+
+        if (FAILED(hr))
+        {
+            OutputDebugStringA("Failed to load OBJ diffuse texture:\n");
+            OutputDebugStringA(meshData.DiffuseTexturePath.c_str());
+            OutputDebugStringA("\n");
+
+            // Do not fail the whole mesh load yet.
+            // Geometry can still render with white fallback.
+            mPrimarySceneTexture.Reset();
+            mPrimarySceneSRV.Reset();
+        }
+        else
+        {
+            OutputDebugStringA("Loaded OBJ diffuse texture:\n");
+            OutputDebugStringA(meshData.DiffuseTexturePath.c_str());
+            OutputDebugStringA("\n");
+        }
+    }
+    else
+    {
+        OutputDebugStringA("OBJ loaded with no diffuse texture path.\n");
+    }
+
     return true;
 }
 
 bool Renderer::BuildAssetMeshes()
 {
     if (!LoadStaticMesh(
-        "..\\..\\assets\\models\\exports\\ancient_greek_scene.obj",
+        "..\\..\\assets\\models\\exports\\milestone17_textured_greek_scene.obj",
         mPrimarySceneMesh))
     {
         return false;

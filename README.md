@@ -27,45 +27,43 @@ The long-term vision is to create a scene that feels like a real game space rath
 The project will continue to grow through small playable milestones.
 
 ---
-## Milestone 16 — Ancient Greek Porch and Temple Foundation
+## Milestone 17 — Ancient Stone Material / Texture Pipeline
 
-Milestone 16 replaced the simple blockout porch and temple with a stronger ancient Greek architectural foundation.
+Milestone 17 added the first working material and texture pipeline for Blender-authored OBJ scenes.
 
+### Goal
+
+Move beyond flat blockout colors by applying a real stone/marble texture to the ancient Greek porch and temple scene.
 
 ### Completed
 
-- Replaced the single porch floor block with individual ancient stone slabs.
-- Added a low stone trim/parapet around the porch platform.
-- Preserved the center stair opening toward the temple.
-- Replaced the simple stair blocks with wider ceremonial stone steps.
-- Added stair cheek walls on both sides of the stairway.
-- Replaced square porch posts with simple Greek-style columns:
-  - base blocks
-  - cylindrical shafts
-  - capital blocks
-  - collar accents
-- Added additional porch trim details:
-  - platform base
-  - top cap stones
-  - front decorative band
-- Replaced the old temple blockout with a clearer ancient Greek temple structure:
-  - landing platform
-  - cella/main chamber
-  - front and back colonnades
-  - entablature beams
-  - roof block
-  - triangular pediments
-- Exported the updated scene from Blender as OBJ.
-- Loaded and rendered the Milestone 16 scene successfully in the DirectX engine.
+- Added a Poly Haven marble/stone texture to the project asset folder.
+- Applied the marble material to the ancient Greek porch and temple in Blender.
+- Generated usable UV coordinates for the porch and temple geometry.
+- Exported the textured Blender scene as OBJ/MTL.
+- Confirmed that the OBJ file includes UV coordinates.
+- Confirmed that the MTL file references the diffuse texture through `map_Kd`.
+- Updated the file references the diffuse texture through `map_Kd`.
+- Updated the OBJ loading pipeline to read basic material information.
+- Added first-pass `.mtl` parsing support:
+  - reads `mtllib` from the OBJ file
+  - opens the referenced `.mtl` file
+  - finds the first `map_Kd` diffuse texture path
+  - resolves texture paths relative to the MTL file location
+- Updated the renderer to load the OBJ diffuse texture with `CreateWICTextureFromFile`.
+- Added a Shader Resource View for the imported primary scene texture.
+- Updated imported scene rendering to bind the loaded texture instead of always using the white fallback texture.
+- Confirmed the textured ancient Greek scene renders successfully in DirectX.
 
-### Current Visual Direction
-
-The environment now follows an ancient Greek architectural style. The porch and temple are designed as a connected stone ceremonial approach rather than a modern wooden porch.
-
-### Pipeline Confirmed
+### Current Pipeline
 
 ```text
-Blender ancient Greek scene
+Blender scene
 -> OBJ export
+-> MTL material file
+-> map_Kd diffuse texture
 -> DirectX OBJ loader
--> rendered scene
+-> WIC texture loader
+-> ShaderResourceView
+-> HLSL texture sampling
+-> rendered textured scene

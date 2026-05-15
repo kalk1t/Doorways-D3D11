@@ -128,7 +128,8 @@ public:
     Microsoft::WRL::ComPtr<ID3D11Texture2D> mStarSkyTexture;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> mStarSkySRV;
 
-
     
 	GpuMesh mPrimarySceneMesh;
+    Microsoft::WRL::ComPtr<ID3D11Resource> mPrimarySceneTexture;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> mPrimarySceneSRV;
 };

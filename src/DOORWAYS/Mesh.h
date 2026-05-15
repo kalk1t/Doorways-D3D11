@@ -6,11 +6,17 @@
 #include <d3d11.h>
 #include <wrl/client.h>
 #include <vector>
+#include <string>
 
 struct MeshData
 {
     std::vector<Vertex> Vertices;
     std::vector<unsigned int> Indices;
+
+
+    // First simple material support.
+    // For now we support one diffuse texture for the whole OBJ.
+    std::string DiffuseTexturePath;
 };
 
 struct GpuMesh

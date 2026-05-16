@@ -46,6 +46,8 @@ private:
     bool mWasFilterToggleKeyDown = false;
     float mFilterToggleCooldown = 0.0f;
 
+    bool mWasSceneResetKeyDown = false;
+    bool mWasScenePrintKeyDown = false;
 public:
 
     Renderer mRenderer;

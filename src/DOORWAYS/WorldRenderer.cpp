@@ -1,6 +1,9 @@
 #include "WorldRenderer.h"
 #include "App.h"
 
+#include "ImportedSceneSettings.h"
+
+
 #include <d3dcompiler.h>
 #include <cstddef>
 #include <cstdint>
@@ -28,6 +31,28 @@ XMMATRIX MakeWorldSRT(
         XMMatrixRotationRollPitchYaw(rotX, rotY, rotZ) *
         XMMatrixTranslation(translateX, translateY, translateZ);
 }
+
+
+XMMATRIX BuildImportedSceneWorldMatrix(
+    const ImportedSceneSettings& sceneSettings)
+{
+    return
+        XMMatrixScaling(
+            sceneSettings.Scale.x,
+            sceneSettings.Scale.y,
+            sceneSettings.Scale.z) *
+
+        XMMatrixRotationRollPitchYaw(
+            sceneSettings.Rotation.x,
+            sceneSettings.Rotation.y,
+            sceneSettings.Rotation.z) *
+
+        XMMatrixTranslation(
+            sceneSettings.Translation.x,
+            sceneSettings.Translation.y,
+            sceneSettings.Translation.z);
+}
+
 
 WorldRenderer::WorldRenderer(App* app)
     : mApp(app)
@@ -350,14 +375,15 @@ void WorldRenderer::DrawImportedScene(const XMMATRIX& viewProjection)
         XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
         XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
         nullptr,
-         XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
-    32.0f,
-    0.0f
+        XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
+        32.0f,
+        0.0f
     };
 
-    XMMATRIX sceneWorld =
-        XMMatrixScaling(1.0f, 1.0f, 1.0f) *
-        XMMatrixTranslation(0.0f, 0.0f, 0.0f);
+    const ImportedSceneSettings& sceneSettings =
+        mApp->mWorld.PrimaryScene;
+
+	XMMATRIX sceneWorld = BuildImportedSceneWorldMatrix(sceneSettings);
 
     mApp->mRenderer.DrawMesh(
         mApp->mRenderer.mPrimarySceneMesh,
@@ -365,11 +391,6 @@ void WorldRenderer::DrawImportedScene(const XMMATRIX& viewProjection)
         viewProjection,
         sceneMaterial);
 }
-
-
-
-
-
 
 
 

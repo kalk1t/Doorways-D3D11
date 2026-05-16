@@ -35,12 +35,6 @@ public:
         const MeshData& meshData,
         GpuMesh& outMesh);
 
-    void DrawMesh(
-        const GpuMesh& mesh,
-        const XMMATRIX& world,
-        const XMMATRIX& viewProjection,
-        const Material& material);
-
     bool BuildAssetMeshes();
     bool LoadStaticMesh(
         const char* filePath,
@@ -56,15 +50,16 @@ public:
         const XMMATRIX& viewProjection,
         const Material& material);
 
-    void DrawDoorLabel(
-        const XMMATRIX& world,
-        const XMMATRIX& viewProjection,
-        const Material& material);
-
     void DrawSphere(
         const XMMATRIX& world,
         const XMMATRIX& viewProjection,
 		const Material& material);
+
+    void DrawMesh(
+        const GpuMesh& mesh,
+        const XMMATRIX& world,
+        const XMMATRIX& viewProjection,
+        const Material& material);
 
 
     bool BuildShaders();

@@ -29,50 +29,63 @@ The project will continue to grow through small playable milestones.
 ---
 ---
 
-## Milestone 19 — Material Quality, Filtering, and Override Pipeline
+## Milestone 20 — Imported Scene Transform and Asset Validation Tools
 
-Milestone 19 improved the material pipeline for imported OBJ scenes and prepared the renderer for higher-quality real 3D assets.
+Milestone 20 improved the imported scene workflow by making the primary Blender/OBJ scene easier to place, inspect, validate, and tune at runtime.
 
-Before this milestone, the imported scene could render multiple materials, but the material system still needed better filtering, per-material tuning, and stronger lighting behavior.
+Before this milestone, the imported scene rendered at a hardcoded identity transform. That worked for the first OBJ pipeline tests, but it was not practical for future real 3D asset work. As the project moves toward real Poly Haven assets and more detailed Blender-authored scenes, imported meshes need clean transform controls and useful diagnostics.
 
 ### Goal
 
-Improve imported material quality and make the Blender-to-Direct3D asset workflow cleaner.
+Create a stronger asset-import workflow for the primary imported scene.
 
-The project now keeps Blender-exported files clean:
+The imported scene can now be moved, scaled, rotated, reset, and printed at runtime. This makes it easier to tune asset placement without constantly editing code, rebuilding, and guessing values.
+
+### Completed
+
+- Fixed imported mesh specular constant-buffer upload.
+- Added `ImportedSceneSettings`.
+- Stored imported scene transform settings in `WorldState`.
+- Updated `WorldRenderer::DrawImportedScene()` to use world-owned scene transform settings.
+- Added a reusable imported-scene world matrix helper.
+- Added OBJ load diagnostics:
+  - path
+  - vertex count
+  - index count
+  - material count
+  - submesh count
+- Added material validation warnings for:
+  - missing DMAT texture scale overrides
+  - missing diffuse texture paths
+  - failed material texture loads
+  - submeshes with missing material indices
+  - submeshes with invalid material indices
+- Added runtime imported scene placement controls:
+  - move X/Y/Z
+  - uniform scale
+  - Y-axis rotation
+  - reset transform
+  - print transform values
+- Added window-title feedback for:
+  - texture filter mode
+  - imported scene position
+  - imported scene scale
+  - imported scene Y rotation
+- Added fast and slow adjustment modes using Shift and Ctrl.
+- Improved `ImportedSceneSettings.h` so tuned transform defaults can be pasted back into one clear location.
+
+### Runtime Asset Placement Controls
 
 ```text
-Blender exports:
-OBJ / MTL
+J / L       = move imported scene left / right
+U / O       = move imported scene up / down
+I / K       = move imported scene toward temple / stairs
++ / -       = scale imported scene bigger / smaller
+Q / E       = rotate imported scene around Y axis
 
-Doorways owns:
-DMAT material override files
+Hold Shift  = faster adjustment
+Hold Ctrl   = slower fine adjustment
 
-Blender OBJ
--> geometry
--> material assignments with usemtl
-
-Blender MTL
--> Kd diffuse color
--> Ks specular color
--> Ns specular power
--> map_Kd diffuse texture
-
-Doorways DMAT
--> tex_scale
--> specular_strength
-
-ObjLoader
--> combines MTL + DMAT into ObjMaterialData
-
-Renderer
--> converts ObjMaterialData into GpuMaterial
--> loads one diffuse texture per material
--> draws each submesh with its assigned material
-
-HLSL
--> applies texture tiling
--> ambient lighting
--> diffuse lighting
--> specular lighting
--> emissive override
+R           = reset imported scene transform
+P           = print current transform to Visual Studio Output
+F           = toggle texture filtering mode

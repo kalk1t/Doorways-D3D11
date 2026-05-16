@@ -1335,185 +1335,6 @@ void Renderer::DrawSphere(
         0);
 }
 
-void Renderer::DrawDoorLabel(
-    const XMMATRIX& world,
-    const XMMATRIX& viewProjection,
-    const Material& material)
-{
-    DrawBox(world, viewProjection, material);
-}
-
-
-
-bool Renderer::CreateGpuMesh(
-    const MeshData& meshData,
-    GpuMesh& outMesh)
-{
-    if (meshData.Vertices.empty() || meshData.Indices.empty())
-    {
-        return false;
-    }
-
-    outMesh = {};
-
-    D3D11_BUFFER_DESC vertexBufferDesc = {};
-    vertexBufferDesc.ByteWidth =
-        static_cast<UINT>(meshData.Vertices.size() * sizeof(Vertex));
-    vertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
-    vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-    vertexBufferDesc.CPUAccessFlags = 0;
-    vertexBufferDesc.MiscFlags = 0;
-    vertexBufferDesc.StructureByteStride = 0;
-
-    D3D11_SUBRESOURCE_DATA vertexInitData = {};
-    vertexInitData.pSysMem = meshData.Vertices.data();
-
-    HRESULT hr = mDevice->CreateBuffer(
-        &vertexBufferDesc,
-        &vertexInitData,
-        outMesh.VertexBuffer.GetAddressOf());
-
-    if (FAILED(hr))
-    {
-        return false;
-    }
-
-    D3D11_BUFFER_DESC indexBufferDesc = {};
-    indexBufferDesc.ByteWidth =
-        static_cast<UINT>(meshData.Indices.size() * sizeof(unsigned int));
-    indexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
-    indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-    indexBufferDesc.CPUAccessFlags = 0;
-    indexBufferDesc.MiscFlags = 0;
-    indexBufferDesc.StructureByteStride = 0;
-
-    D3D11_SUBRESOURCE_DATA indexInitData = {};
-    indexInitData.pSysMem = meshData.Indices.data();
-
-    hr = mDevice->CreateBuffer(
-        &indexBufferDesc,
-        &indexInitData,
-        outMesh.IndexBuffer.GetAddressOf());
-
-    if (FAILED(hr))
-    {
-        return false;
-    }
-
-    outMesh.IndexCount = static_cast<unsigned int>(meshData.Indices.size());
-
-    // Copy CPU material data into GPU material slots.
-    // Texture SRVs will be loaded in a later step.
-    outMesh.Materials.clear();
-    outMesh.Materials.reserve(meshData.Materials.size());
-
-    for (const ObjMaterialData& sourceMaterial : meshData.Materials)
-    {
-        GpuMaterial gpuMaterial = {};
-        gpuMaterial.DiffuseColor = sourceMaterial.DiffuseColor;
-        gpuMaterial.SpecularColor = sourceMaterial.SpecularColor;
-        gpuMaterial.SpecularPower = sourceMaterial.SpecularPower;
-
-
-// DMAT overrides are the preferred source for Doorways material tuning.
-// Name-based values are only fallback safety defaults.
-        if (sourceMaterial.HasMaterialOverrideTexTransform)
-        {
-            gpuMaterial.TexTransform = sourceMaterial.TexTransform;
-        }
-        else
-        {
-            gpuMaterial.TexTransform =
-                GetFallbackTexTransformForMaterialName(sourceMaterial.Name);
-        }
-
-        OutputDebugStringA("Material tex scale: ");
-        OutputDebugStringA(sourceMaterial.Name.c_str());
-        OutputDebugStringA(" -> ");
-        OutputDebugStringA(std::to_string(gpuMaterial.TexTransform.x).c_str());
-        OutputDebugStringA(", ");
-        OutputDebugStringA(std::to_string(gpuMaterial.TexTransform.y).c_str());
-
-        if (sourceMaterial.HasMaterialOverrideTexTransform)
-        {
-            OutputDebugStringA(" [override]\n");
-        }
-        else
-        {
-            OutputDebugStringA(" [fallback]\n");
-        }
-
-        OutputDebugStringA("Material specular: ");
-        OutputDebugStringA(sourceMaterial.Name.c_str());
-        OutputDebugStringA(" | Ks = ");
-        OutputDebugStringA(std::to_string(gpuMaterial.SpecularColor.x).c_str());
-        OutputDebugStringA(", ");
-        OutputDebugStringA(std::to_string(gpuMaterial.SpecularColor.y).c_str());
-        OutputDebugStringA(", ");
-        OutputDebugStringA(std::to_string(gpuMaterial.SpecularColor.z).c_str());
-        OutputDebugStringA(" | Strength = ");
-        OutputDebugStringA(std::to_string(gpuMaterial.SpecularColor.w).c_str());
-        OutputDebugStringA(" | Ns = ");
-        OutputDebugStringA(std::to_string(gpuMaterial.SpecularPower).c_str());
-        OutputDebugStringA("\n");
-
-        if (!sourceMaterial.DiffuseTexturePath.empty())
-        {
-            std::wstring texturePathWide(
-                sourceMaterial.DiffuseTexturePath.begin(),
-                sourceMaterial.DiffuseTexturePath.end());
-
-            HRESULT textureHr = CreateWICTextureFromFile(
-                mDevice.Get(),
-                texturePathWide.c_str(),
-                gpuMaterial.DiffuseTexture.GetAddressOf(),
-                gpuMaterial.DiffuseSRV.GetAddressOf());
-
-            if (FAILED(textureHr))
-            {
-                OutputDebugStringA("Failed to load material diffuse texture:\n");
-                OutputDebugStringA(sourceMaterial.DiffuseTexturePath.c_str());
-                OutputDebugStringA("\n");
-            }
-            else
-            {
-                OutputDebugStringA("Loaded material diffuse texture:\n");
-                OutputDebugStringA(sourceMaterial.Name.c_str());
-                OutputDebugStringA(" -> ");
-                OutputDebugStringA(sourceMaterial.DiffuseTexturePath.c_str());
-                OutputDebugStringA("\n");
-            }
-        }
-
-        outMesh.Materials.push_back(gpuMaterial);
-    }
-
-    // Copy CPU submesh ranges into GPU submesh ranges.
-    outMesh.Submeshes.clear();
-    outMesh.Submeshes.reserve(meshData.Submeshes.size());
-
-    for (const SubmeshData& sourceSubmesh : meshData.Submeshes)
-    {
-        GpuSubmesh gpuSubmesh = {};
-        gpuSubmesh.StartIndex = sourceSubmesh.StartIndex;
-        gpuSubmesh.IndexCount = sourceSubmesh.IndexCount;
-        gpuSubmesh.MaterialIndex = sourceSubmesh.MaterialIndex;
-
-        outMesh.Submeshes.push_back(gpuSubmesh);
-    }
-
-    OutputDebugStringA("GPU materials copied: ");
-    OutputDebugStringA(std::to_string(outMesh.Materials.size()).c_str());
-    OutputDebugStringA("\n");
-
-    OutputDebugStringA("GPU submeshes copied: ");
-    OutputDebugStringA(std::to_string(outMesh.Submeshes.size()).c_str());
-    OutputDebugStringA("\n");
-
-    return true;
-}
-
-
 void Renderer::DrawMesh(
     const GpuMesh& mesh,
     const XMMATRIX& world,
@@ -1646,6 +1467,13 @@ void Renderer::DrawMesh(
 
             perObjectData.MaterialDiffuse = diffuseColor;
             perObjectData.TexTransform = texTransform;
+
+// Send the final imported-material specular values to the shader.
+// These values start from the draw-call material, then get multiplied
+// by the OBJ/MTL/DMAT material data above.
+            perObjectData.MaterialSpecular = specularColor;
+            perObjectData.SpecularPower = specularPower;
+
             perObjectData.EmissiveStrength = material.EmissiveStrength;
 
             mImmediateContext->UpdateSubresource(
@@ -1667,6 +1495,9 @@ void Renderer::DrawMesh(
                 0);
         };
 
+// Draw each submesh with its assigned material.
+// This is what allows one imported OBJ scene to use multiple textures,
+// colors, texture scales, and specular settings.
     if (!mesh.Submeshes.empty())
     {
         for (const GpuSubmesh& submesh : mesh.Submeshes)
@@ -1700,6 +1531,212 @@ void Renderer::DrawMesh(
         nullptr);
 }
 
+bool Renderer::CreateGpuMesh(
+    const MeshData& meshData,
+    GpuMesh& outMesh)
+{
+    if (meshData.Vertices.empty() || meshData.Indices.empty())
+    {
+        return false;
+    }
+
+    outMesh = {};
+
+    D3D11_BUFFER_DESC vertexBufferDesc = {};
+    vertexBufferDesc.ByteWidth =
+        static_cast<UINT>(meshData.Vertices.size() * sizeof(Vertex));
+    vertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+    vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    vertexBufferDesc.CPUAccessFlags = 0;
+    vertexBufferDesc.MiscFlags = 0;
+    vertexBufferDesc.StructureByteStride = 0;
+
+    D3D11_SUBRESOURCE_DATA vertexInitData = {};
+    vertexInitData.pSysMem = meshData.Vertices.data();
+
+    HRESULT hr = mDevice->CreateBuffer(
+        &vertexBufferDesc,
+        &vertexInitData,
+        outMesh.VertexBuffer.GetAddressOf());
+
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    D3D11_BUFFER_DESC indexBufferDesc = {};
+    indexBufferDesc.ByteWidth =
+        static_cast<UINT>(meshData.Indices.size() * sizeof(unsigned int));
+    indexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+    indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+    indexBufferDesc.CPUAccessFlags = 0;
+    indexBufferDesc.MiscFlags = 0;
+    indexBufferDesc.StructureByteStride = 0;
+
+    D3D11_SUBRESOURCE_DATA indexInitData = {};
+    indexInitData.pSysMem = meshData.Indices.data();
+
+    hr = mDevice->CreateBuffer(
+        &indexBufferDesc,
+        &indexInitData,
+        outMesh.IndexBuffer.GetAddressOf());
+
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    outMesh.IndexCount = static_cast<unsigned int>(meshData.Indices.size());
+
+    // Copy CPU material data into GPU material slots.
+    // Texture SRVs will be loaded in a later step.
+    outMesh.Materials.clear();
+    outMesh.Materials.reserve(meshData.Materials.size());
+
+    // Convert CPU-side material data into renderer-side GPU material data.
+    //
+    // At this point, ObjLoader has already combined:
+    //   - standard MTL data: Kd, Ks, Ns, map_Kd
+    //   - Doorways DMAT overrides: tex_scale, specular_strength
+    //
+    // The renderer stores the final material values here and loads each
+    // material's diffuse texture into a shader resource view.
+    for (const ObjMaterialData& sourceMaterial : meshData.Materials)
+    {
+        GpuMaterial gpuMaterial = {};
+        gpuMaterial.DiffuseColor = sourceMaterial.DiffuseColor;
+        gpuMaterial.SpecularColor = sourceMaterial.SpecularColor;
+        gpuMaterial.SpecularPower = sourceMaterial.SpecularPower;
+
+
+        // DMAT overrides are the preferred source for Doorways material tuning.
+        // Name-based values are only fallback safety defaults.
+        if (sourceMaterial.HasMaterialOverrideTexTransform)
+        {
+            gpuMaterial.TexTransform = sourceMaterial.TexTransform;
+        }
+        else
+        {
+            gpuMaterial.TexTransform =
+                GetFallbackTexTransformForMaterialName(sourceMaterial.Name);
+
+            OutputDebugStringA("ASSET WARNING: material has no DMAT tex_scale override: ");
+            OutputDebugStringA(sourceMaterial.Name.c_str());
+            OutputDebugStringA("\n");
+        }
+
+        OutputDebugStringA("Material tex scale: ");
+        OutputDebugStringA(sourceMaterial.Name.c_str());
+        OutputDebugStringA(" -> ");
+        OutputDebugStringA(std::to_string(gpuMaterial.TexTransform.x).c_str());
+        OutputDebugStringA(", ");
+        OutputDebugStringA(std::to_string(gpuMaterial.TexTransform.y).c_str());
+
+        if (sourceMaterial.HasMaterialOverrideTexTransform)
+        {
+            OutputDebugStringA(" [override]\n");
+        }
+        else
+        {
+            OutputDebugStringA(" [fallback]\n");
+        }
+
+        OutputDebugStringA("Material specular: ");
+        OutputDebugStringA(sourceMaterial.Name.c_str());
+        OutputDebugStringA(" | Ks = ");
+        OutputDebugStringA(std::to_string(gpuMaterial.SpecularColor.x).c_str());
+        OutputDebugStringA(", ");
+        OutputDebugStringA(std::to_string(gpuMaterial.SpecularColor.y).c_str());
+        OutputDebugStringA(", ");
+        OutputDebugStringA(std::to_string(gpuMaterial.SpecularColor.z).c_str());
+        OutputDebugStringA(" | Strength = ");
+        OutputDebugStringA(std::to_string(gpuMaterial.SpecularColor.w).c_str());
+        OutputDebugStringA(" | Ns = ");
+        OutputDebugStringA(std::to_string(gpuMaterial.SpecularPower).c_str());
+        OutputDebugStringA("\n");
+
+        if (sourceMaterial.DiffuseTexturePath.empty())
+        {
+            OutputDebugStringA("ASSET WARNING: material has no diffuse texture path: ");
+            OutputDebugStringA(sourceMaterial.Name.c_str());
+            OutputDebugStringA("\n");
+        }
+        else
+        {
+            std::wstring texturePathWide(
+                sourceMaterial.DiffuseTexturePath.begin(),
+                sourceMaterial.DiffuseTexturePath.end());
+
+            HRESULT textureHr = CreateWICTextureFromFile(
+                mDevice.Get(),
+                texturePathWide.c_str(),
+                gpuMaterial.DiffuseTexture.GetAddressOf(),
+                gpuMaterial.DiffuseSRV.GetAddressOf());
+
+            if (FAILED(textureHr))
+            {
+                OutputDebugStringA("ASSET WARNING: failed to load material diffuse texture:\n");
+                OutputDebugStringA("Material: ");
+                OutputDebugStringA(sourceMaterial.Name.c_str());
+                OutputDebugStringA("\nPath: ");
+                OutputDebugStringA(sourceMaterial.DiffuseTexturePath.c_str());
+                OutputDebugStringA("\n");
+            }
+            else
+            {
+                OutputDebugStringA("Loaded material diffuse texture:\n");
+                OutputDebugStringA(sourceMaterial.Name.c_str());
+                OutputDebugStringA(" -> ");
+                OutputDebugStringA(sourceMaterial.DiffuseTexturePath.c_str());
+                OutputDebugStringA("\n");
+            }
+        }
+
+        outMesh.Materials.push_back(gpuMaterial);
+    }
+
+    // Copy CPU submesh ranges into GPU submesh ranges.
+    outMesh.Submeshes.clear();
+    outMesh.Submeshes.reserve(meshData.Submeshes.size());
+
+    for (const SubmeshData& sourceSubmesh : meshData.Submeshes)
+    {
+        GpuSubmesh gpuSubmesh = {};
+        gpuSubmesh.StartIndex = sourceSubmesh.StartIndex;
+        gpuSubmesh.IndexCount = sourceSubmesh.IndexCount;
+        gpuSubmesh.MaterialIndex = sourceSubmesh.MaterialIndex;
+
+        if (gpuSubmesh.MaterialIndex < 0)
+        {
+            OutputDebugStringA("ASSET WARNING: submesh has no material index. StartIndex: ");
+            OutputDebugStringA(std::to_string(gpuSubmesh.StartIndex).c_str());
+            OutputDebugStringA(", IndexCount: ");
+            OutputDebugStringA(std::to_string(gpuSubmesh.IndexCount).c_str());
+            OutputDebugStringA("\n");
+        }
+        else if (static_cast<size_t>(gpuSubmesh.MaterialIndex) >= outMesh.Materials.size())
+        {
+            OutputDebugStringA("ASSET WARNING: submesh references invalid material index. MaterialIndex: ");
+            OutputDebugStringA(std::to_string(gpuSubmesh.MaterialIndex).c_str());
+            OutputDebugStringA(", MaterialCount: ");
+            OutputDebugStringA(std::to_string(outMesh.Materials.size()).c_str());
+            OutputDebugStringA("\n");
+        }
+
+        outMesh.Submeshes.push_back(gpuSubmesh);
+    }
+
+    OutputDebugStringA("GPU materials copied: ");
+    OutputDebugStringA(std::to_string(outMesh.Materials.size()).c_str());
+    OutputDebugStringA("\n");
+
+    OutputDebugStringA("GPU submeshes copied: ");
+    OutputDebugStringA(std::to_string(outMesh.Submeshes.size()).c_str());
+    OutputDebugStringA("\n");
+
+    return true;
+}
+
 bool Renderer::LoadStaticMesh(
     const char* filePath,
     GpuMesh& outMesh)
@@ -1714,6 +1751,32 @@ bool Renderer::LoadStaticMesh(
 
         return false;
     }
+
+    OutputDebugStringA("\n");
+    OutputDebugStringA("========================================\n");
+    OutputDebugStringA("Static mesh OBJ loaded successfully\n");
+    OutputDebugStringA("Path: ");
+    OutputDebugStringA(filePath);
+    OutputDebugStringA("\n");
+
+    OutputDebugStringA("Vertices: ");
+    OutputDebugStringA(std::to_string(meshData.Vertices.size()).c_str());
+    OutputDebugStringA("\n");
+
+    OutputDebugStringA("Indices: ");
+    OutputDebugStringA(std::to_string(meshData.Indices.size()).c_str());
+    OutputDebugStringA("\n");
+
+    OutputDebugStringA("Materials: ");
+    OutputDebugStringA(std::to_string(meshData.Materials.size()).c_str());
+    OutputDebugStringA("\n");
+
+    OutputDebugStringA("Submeshes: ");
+    OutputDebugStringA(std::to_string(meshData.Submeshes.size()).c_str());
+    OutputDebugStringA("\n");
+
+    OutputDebugStringA("========================================\n");
+    OutputDebugStringA("\n");
 
     if (!CreateGpuMesh(meshData, outMesh))
     {

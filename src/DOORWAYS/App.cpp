@@ -1,6 +1,7 @@
 #include "App.h"
 #include "RenderTypes.h"
 #include "EnvironmentSettings.h"
+#include "ImportedSceneSettings.h"
 
 #include <d3dcompiler.h>
 #include <cstddef>
@@ -9,6 +10,8 @@
 #include <string>
 #include <chrono>
 #include <cmath>
+#include <sstream>
+#include <iomanip>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -42,6 +45,45 @@ namespace
         return DefWindowProcW(hwnd, msg, wParam, lParam);
     }
 
+    void PrintImportedSceneTransform(
+        const ImportedSceneSettings& sceneSettings)
+    {
+        OutputDebugStringA("\n");
+        OutputDebugStringA("Imported scene transform:\n");
+
+        OutputDebugStringA("Scale = XMFLOAT3(");
+        OutputDebugStringA(std::to_string(sceneSettings.Scale.x).c_str());
+        OutputDebugStringA("f, ");
+        OutputDebugStringA(std::to_string(sceneSettings.Scale.y).c_str());
+        OutputDebugStringA("f, ");
+        OutputDebugStringA(std::to_string(sceneSettings.Scale.z).c_str());
+        OutputDebugStringA("f);\n");
+
+        OutputDebugStringA("Rotation = XMFLOAT3(");
+        OutputDebugStringA(std::to_string(sceneSettings.Rotation.x).c_str());
+        OutputDebugStringA("f, ");
+        OutputDebugStringA(std::to_string(sceneSettings.Rotation.y).c_str());
+        OutputDebugStringA("f, ");
+        OutputDebugStringA(std::to_string(sceneSettings.Rotation.z).c_str());
+        OutputDebugStringA("f);\n");
+
+        OutputDebugStringA("Translation = XMFLOAT3(");
+        OutputDebugStringA(std::to_string(sceneSettings.Translation.x).c_str());
+        OutputDebugStringA("f, ");
+        OutputDebugStringA(std::to_string(sceneSettings.Translation.y).c_str());
+        OutputDebugStringA("f, ");
+        OutputDebugStringA(std::to_string(sceneSettings.Translation.z).c_str());
+        OutputDebugStringA("f);\n");
+
+        OutputDebugStringA("\n");
+    }
+
+    std::wstring FormatFloatForTitle(float value)
+    {
+        std::wstringstream stream;
+        stream << std::fixed << std::setprecision(2) << value;
+        return stream.str();
+    }
 
 }
 
@@ -240,8 +282,26 @@ void App::UpdateWindowTitle()
         ? L"Point Debug"
         : L"Anisotropic";
 
-    std::wstring title = L"Doorways: Playable 3D Scene | Filter: ";
+    const ImportedSceneSettings& sceneSettings =
+        mWorld.PrimaryScene;
+
+    std::wstring title = L"Doorways | Filter: ";
     title += filterName;
+
+    title += L" | Pos: ";
+    title += FormatFloatForTitle(sceneSettings.Translation.x);
+
+    title += L", ";
+    title += FormatFloatForTitle(sceneSettings.Translation.y);
+
+    title += L", ";
+    title += FormatFloatForTitle(sceneSettings.Translation.z);
+
+    title += L" | Scale: ";
+    title += FormatFloatForTitle(sceneSettings.Scale.x);
+
+    title += L" | RotY: ";
+    title += FormatFloatForTitle(sceneSettings.Rotation.y);
 
     SetWindowTextW(
         mMainWindow,
@@ -250,6 +310,29 @@ void App::UpdateWindowTitle()
 
 void App::Update(float deltaTime)
 {
+
+    /*
+
+J / L = move scene left / right
+U / O = move scene up / down
+I / K = move scene toward temple / stairs
++ / - = scale scene bigger / smaller
+Q / E = rotate scene around Y axis
+
+Hold Shift = faster adjustment
+Hold Ctrl  = slower fine adjustment
+
+R = reset imported scene transform
+P = print current transform to Output window
+F = toggle texture filtering
+
+    */
+
+
+
+
+
+
 	mWorld.SceneTime += deltaTime;
 	mPlayerController.Update(mWorld, deltaTime);
 
@@ -290,6 +373,159 @@ void App::Update(float deltaTime)
     mWasFilterToggleKeyDown = isFilterToggleKeyDown;
 
 
+	bool didSceneTransformChange = false;
+// ------------------------------------------------------------
+// Imported scene debug placement controls.
+// These controls are temporary editor-style tools for tuning
+// the imported Blender/OBJ scene position and scale.
+// ------------------------------------------------------------
+
+    ImportedSceneSettings& sceneSettings =
+        mWorld.PrimaryScene;
+
+    const float baseMoveSpeed = 4.0f;
+    const float baseScaleSpeed = 0.75f;
+    const float baseRotationSpeed = 1.25f;
+
+    float speedMultiplier = 1.0f;
+
+    // Hold Shift for faster scene placement.
+    if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
+    {
+        speedMultiplier = 4.0f;
+    }
+
+    // Hold Ctrl for slower fine-tuning.
+    if (GetAsyncKeyState(VK_CONTROL) & 0x8000)
+    {
+        speedMultiplier = 0.25f;
+    }
+
+    const float moveAmount =
+        baseMoveSpeed * speedMultiplier * deltaTime;
+
+    const float scaleAmount =
+        baseScaleSpeed * speedMultiplier * deltaTime;
+
+    const float rotationAmount =
+        baseRotationSpeed * speedMultiplier * deltaTime;
+
+    // J / L = move left / right.
+    if (GetAsyncKeyState('J') & 0x8000)
+    {
+        sceneSettings.Translation.x -= moveAmount;
+        didSceneTransformChange = true;
+    }
+
+    if (GetAsyncKeyState('L') & 0x8000)
+    {
+        sceneSettings.Translation.x += moveAmount;
+        didSceneTransformChange = true;
+    }
+
+    // U / O = move up / down.
+    if (GetAsyncKeyState('U') & 0x8000)
+    {
+        sceneSettings.Translation.y += moveAmount;
+        didSceneTransformChange = true;
+    }
+
+    if (GetAsyncKeyState('O') & 0x8000)
+    {
+        sceneSettings.Translation.y -= moveAmount;
+        didSceneTransformChange = true;
+    }
+
+    // I / K = move toward temple / toward stairs.
+    // In our world convention, -Z is temple side and +Z is stairs side.
+    if (GetAsyncKeyState('I') & 0x8000)
+    {
+        sceneSettings.Translation.z -= moveAmount;
+        didSceneTransformChange = true;
+    }
+
+    if (GetAsyncKeyState('K') & 0x8000)
+    {
+        sceneSettings.Translation.z += moveAmount;
+        didSceneTransformChange = true;
+    }
+
+    // + / - = uniformly scale the imported scene.
+    bool isScaleUpKeyDown =
+        (GetAsyncKeyState(VK_OEM_PLUS) & 0x8000) ||
+        (GetAsyncKeyState(VK_ADD) & 0x8000);
+
+    bool isScaleDownKeyDown =
+        (GetAsyncKeyState(VK_OEM_MINUS) & 0x8000) ||
+        (GetAsyncKeyState(VK_SUBTRACT) & 0x8000);
+
+    if (isScaleUpKeyDown)
+    {
+        sceneSettings.Scale.x += scaleAmount;
+        sceneSettings.Scale.y += scaleAmount;
+        sceneSettings.Scale.z += scaleAmount;
+        didSceneTransformChange = true;
+    }
+
+    if (isScaleDownKeyDown)
+    {
+        sceneSettings.Scale.x -= scaleAmount;
+        sceneSettings.Scale.y -= scaleAmount;
+        sceneSettings.Scale.z -= scaleAmount;
+
+        if (sceneSettings.Scale.x < 0.05f) sceneSettings.Scale.x = 0.05f;
+        if (sceneSettings.Scale.y < 0.05f) sceneSettings.Scale.y = 0.05f;
+        if (sceneSettings.Scale.z < 0.05f) sceneSettings.Scale.z = 0.05f;
+
+
+        didSceneTransformChange = true;
+    }
+
+    // Q / E = rotate imported scene left / right around Y axis.
+    if (GetAsyncKeyState('Q') & 0x8000)
+    {
+        sceneSettings.Rotation.y -= rotationAmount;
+        didSceneTransformChange = true;
+    }
+
+    if (GetAsyncKeyState('E') & 0x8000)
+    {
+        sceneSettings.Rotation.y += rotationAmount;
+        didSceneTransformChange = true;
+    }
+
+    // R = reset imported scene transform.
+    bool isSceneResetKeyDown =
+        (GetAsyncKeyState('R') & 0x8000) != 0;
+        
+
+    if (isSceneResetKeyDown && !mWasSceneResetKeyDown)
+    {
+        sceneSettings = ImportedSceneSettings();
+
+        didSceneTransformChange = true;
+
+        OutputDebugStringA("Imported scene transform reset.\n");
+    }
+
+    mWasSceneResetKeyDown = isSceneResetKeyDown;
+
+    // P = print current imported scene transform to the Output window.
+    bool isScenePrintKeyDown =
+        (GetAsyncKeyState('P') & 0x8000) != 0;
+
+    if (isScenePrintKeyDown && !mWasScenePrintKeyDown)
+    {
+        PrintImportedSceneTransform(sceneSettings);
+    }
+
+    mWasScenePrintKeyDown = isScenePrintKeyDown;
+
+
+    if (didSceneTransformChange)
+    {
+        UpdateWindowTitle();
+    }
 
 
 

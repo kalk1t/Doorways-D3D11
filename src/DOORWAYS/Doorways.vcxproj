@@ -141,6 +141,7 @@
     <ClInclude Include="App.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="EnvironmentSettings.h" />
+    <ClInclude Include="ImportedSceneSettings.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="ObjLoader.h" />
     <ClInclude Include="Player.h" />

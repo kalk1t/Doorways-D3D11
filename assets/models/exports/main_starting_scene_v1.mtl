@@ -1,0 +1,52 @@
+# Blender 5.1.1 MTL File: 'main_starting_scene_v1.blend'
+# www.blender.org
+
+newmtl MAT_Greek_Marble_01
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd C:/Users/hedon/source/repos/DOORWAYS/assets/textures/polyhaven/marble_01_diff_1k.jpg
+
+newmtl MAT_Mauntain_rocky
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd C:/Users/hedon/OneDrive/Documents/Poly Haven/rock_wall_10/textures/rock_wall_10_diff_1k.jpg
+
+newmtl MAT_Mountain_Rock_Blockout
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.033102 0.039681 0.054973
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+
+newmtl MAT_Water_Main
+Ns 302.500000
+Ka 1.000000 1.000000 1.000000
+Kd 0.050336 0.010733 0.800007
+Ks 0.750000 0.750000 0.750000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+
+newmtl MAT_Waterfall_Placeholder
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.003936 0.050877 0.889992
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2

@@ -1790,10 +1790,11 @@ bool Renderer::LoadStaticMesh(
     return true;
 }
 
+
 bool Renderer::BuildAssetMeshes()
 {
     if (!LoadStaticMesh(
-        "..\\..\\assets\\models\\exports\\milestone18_multimaterial_scene.obj",
+        "..\\..\\assets\\models\\exports\\main_starting_scene_v1.obj",
         mPrimarySceneMesh))
     {
         return false;

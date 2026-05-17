@@ -44,7 +44,7 @@ Thumbs.db
 assets/downloads/
 assets/raw/
 
-# Blender backup files
-*.blend1
-*.blend2
-*.blend@
+# Blender source files are large local scene-editor files.
+assets/blender/*.blend
+assets/blender/*.blend1
+assets/blender/*.blend2

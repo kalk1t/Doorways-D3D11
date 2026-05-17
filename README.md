@@ -29,63 +29,33 @@ The project will continue to grow through small playable milestones.
 ---
 ---
 
-## Milestone 20 — Imported Scene Transform and Asset Validation Tools
+---
 
-Milestone 20 improved the imported scene workflow by making the primary Blender/OBJ scene easier to place, inspect, validate, and tune at runtime.
+## Milestone 21 — Main Scene Blender Composition V1
 
-Before this milestone, the imported scene rendered at a hardcoded identity transform. That worked for the first OBJ pipeline tests, but it was not practical for future real 3D asset work. As the project moves toward real Poly Haven assets and more detailed Blender-authored scenes, imported meshes need clean transform controls and useful diagnostics.
+Milestone 21 moved Doorways from a renderer-built environment toward a Blender-authored main starting scene.
+
+The goal of this milestone is to establish the first real version of the main scene: a Greek-style porch and temple placed in the middle of a water environment, with mountains surrounding the scene and two waterfalls.
+
+This milestone treats Blender as the main scene editor while the Direct3D 11 renderer loads the exported scene through the existing OBJ/MTL pipeline.
 
 ### Goal
 
-Create a stronger asset-import workflow for the primary imported scene.
+Create the first complete main starting scene composition for Doorways.
 
-The imported scene can now be moved, scaled, rotated, reset, and printed at runtime. This makes it easier to tune asset placement without constantly editing code, rebuilding, and guessing values.
+The scene should represent the core visual identity of the game:
 
-### Completed
+- Greek-style porch and temple
+- 9 stairs leading toward the temple
+- water surrounding the central temple area
+- Mountains around
+- two waterfall locations coming down from the mountain area, behind the temple
+- night sky and moon still rendered by the engine
+- first real imported prop support through the Blender/OBJ workflow
 
-- Fixed imported mesh specular constant-buffer upload.
-- Added `ImportedSceneSettings`.
-- Stored imported scene transform settings in `WorldState`.
-- Updated `WorldRenderer::DrawImportedScene()` to use world-owned scene transform settings.
-- Added a reusable imported-scene world matrix helper.
-- Added OBJ load diagnostics:
-  - path
-  - vertex count
-  - index count
-  - material count
-  - submesh count
-- Added material validation warnings for:
-  - missing DMAT texture scale overrides
-  - missing diffuse texture paths
-  - failed material texture loads
-  - submeshes with missing material indices
-  - submeshes with invalid material indices
-- Added runtime imported scene placement controls:
-  - move X/Y/Z
-  - uniform scale
-  - Y-axis rotation
-  - reset transform
-  - print transform values
-- Added window-title feedback for:
-  - texture filter mode
-  - imported scene position
-  - imported scene scale
-  - imported scene Y rotation
-- Added fast and slow adjustment modes using Shift and Ctrl.
-- Improved `ImportedSceneSettings.h` so tuned transform defaults can be pasted back into one clear location.
+### Blender Scene Source
 
-### Runtime Asset Placement Controls
+Created/updated the main Blender scene file:
 
 ```text
-J / L       = move imported scene left / right
-U / O       = move imported scene up / down
-I / K       = move imported scene toward temple / stairs
-+ / -       = scale imported scene bigger / smaller
-Q / E       = rotate imported scene around Y axis
-
-Hold Shift  = faster adjustment
-Hold Ctrl   = slower fine adjustment
-
-R           = reset imported scene transform
-P           = print current transform to Visual Studio Output
-F           = toggle texture filtering mode
+assets/blender/main_starting_scene_v1.blend

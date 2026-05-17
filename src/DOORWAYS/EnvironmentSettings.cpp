@@ -22,16 +22,18 @@ EnvironmentSettings GetSceneSettings(float sceneTime)
         0.45f,
         0.0f);
 
+    //Directional light
     settings.Lighting.LightColor = XMFLOAT4(
-        0.42f + moonPulse * 0.05f,
-        0.48f + moonPulse * 0.05f,
-        0.68f + moonPulse * 0.07f,
+        0.81f + moonPulse * 0.36f,
+        0.72f + moonPulse * 0.36f,
+        0.99f + moonPulse * 0.18f,
         1.0f);
 
+    //Ambient light
     settings.Lighting.AmbientColor = XMFLOAT4(
-        0.045f,
-        0.055f,
-        0.095f,
+        0.90f,
+        0.705f,
+        0.660f,
         1.0f);
 
     return settings;

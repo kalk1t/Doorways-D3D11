@@ -12,14 +12,4 @@
 #
 # The material name must match the Blender/MTL material name exactly.
 
-material MAT_Mountain_Rock_Blockout
-tex_scale 8.0 4.0
-specular_strength 0.05
 
-material MAT_Polyhaven_Marble01
-tex_scale 4.0 4.0
-specular_strength 0.35
-
-material MAT_Water_Blockout
-tex_scale 1.0 1.0
-specular_strength 0.65

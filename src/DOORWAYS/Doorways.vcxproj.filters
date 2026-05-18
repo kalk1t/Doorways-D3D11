@@ -77,6 +77,18 @@
     <ClInclude Include="ImportedSceneSettings.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="PlayerSpawnSettings.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerMovementBounds.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerBlockedZone.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerGroundHeight.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

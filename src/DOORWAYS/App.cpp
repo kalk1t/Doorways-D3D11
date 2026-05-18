@@ -23,6 +23,8 @@ using namespace DirectX;
 
 namespace
 {
+
+    App* gApp = nullptr;
     const wchar_t* gWindowClassName = L"DoorwaysDemoWindowClass";
 
    
@@ -33,6 +35,54 @@ namespace
         case WM_DESTROY:
             PostQuitMessage(0);
             return 0;
+
+        case WM_SYSCOMMAND:
+        {
+            // Prevent Alt from activating the Windows system menu.
+            // Without this, pressing Alt can make the game appear frozen.
+            if ((wParam & 0xfff0) == SC_KEYMENU)
+            {
+                return 0;
+            }
+
+            break;
+        }
+
+        case WM_SYSKEYDOWN:
+        {
+            // Ignore bare Alt key presses.
+            // Do not block all system keys, because Alt+F4 should still work.
+            if (wParam == VK_MENU)
+            {
+                return 0;
+            }
+
+            break;
+        }
+
+        case WM_SYSKEYUP:
+        {
+            if (wParam == VK_MENU)
+            {
+                return 0;
+            }
+
+            break;
+        }
+
+
+        case WM_MOUSEWHEEL:
+        {
+            if (gApp != nullptr)
+            {
+                int wheelDelta =
+                    GET_WHEEL_DELTA_WPARAM(wParam);
+
+                gApp->AddMouseWheelDelta(wheelDelta);
+            }
+
+            return 0;
+        }
 
         case WM_KEYDOWN:
             if (wParam == VK_ESCAPE)
@@ -91,6 +141,7 @@ App::App(HINSTANCE hInstance)
     : mAppInstance(hInstance),
     mWorldRenderer(this)
 {
+    gApp = this;
 }
 
 bool App::Initialize()
@@ -275,6 +326,11 @@ bool App::InitWindow()
     return true;
 }
 
+void App::AddMouseWheelDelta(int wheelDelta)
+{
+    mMouseWheelDelta += wheelDelta;
+}
+
 void App::UpdateWindowTitle()
 {
     const wchar_t* filterName =
@@ -285,10 +341,46 @@ void App::UpdateWindowTitle()
     const ImportedSceneSettings& sceneSettings =
         mWorld.PrimaryScene;
 
-    std::wstring title = L"Doorways | Filter: ";
+    const Player& player =
+        mWorld.MainPlayer;
+
+    const wchar_t* playerState =
+        player.IsMoving
+        ? L"Moving"
+        : L"Idle";
+
+    const wchar_t* boundsDebugState =
+        mWorld.ShowPlayerBoundsDebug
+        ? L"Bounds ON"
+        : L"Bounds OFF";
+
+    std::wstring title = L"Doorways";
+
+    title += L" | Player: ";
+    title += FormatFloatForTitle(player.Position.x);
+
+    title += L", ";
+    title += FormatFloatForTitle(player.Position.y);
+
+    title += L", ";
+    title += FormatFloatForTitle(player.Position.z);
+
+    title += L" | Yaw: ";
+    title += FormatFloatForTitle(player.Yaw);
+
+    title += L" | State: ";
+    title += playerState;
+
+    title += L" | CamDist: ";
+    title += FormatFloatForTitle(mWorld.MainCamera.FollowDistance);
+
+    title += L" | ";
+    title += boundsDebugState;
+
+    title += L" | Filter: ";
     title += filterName;
 
-    title += L" | Pos: ";
+    title += L" | Scene Pos: ";
     title += FormatFloatForTitle(sceneSettings.Translation.x);
 
     title += L", ";
@@ -297,10 +389,10 @@ void App::UpdateWindowTitle()
     title += L", ";
     title += FormatFloatForTitle(sceneSettings.Translation.z);
 
-    title += L" | Scale: ";
+    title += L" | Scene Scale: ";
     title += FormatFloatForTitle(sceneSettings.Scale.x);
 
-    title += L" | RotY: ";
+    title += L" | Scene RotY: ";
     title += FormatFloatForTitle(sceneSettings.Rotation.y);
 
     SetWindowTextW(
@@ -322,9 +414,12 @@ Q / E = rotate scene around Y axis
 Hold Shift = faster adjustment
 Hold Ctrl  = slower fine adjustment
 
-R = reset imported scene transform
+
+T = reset imported scene transform
 P = print current transform to Output window
 F = toggle texture filtering
+B = toggle player bounds debug overlay
+R = reset player and camera
 
     */
 
@@ -334,7 +429,9 @@ F = toggle texture filtering
 
 
 	mWorld.SceneTime += deltaTime;
-	mPlayerController.Update(mWorld, deltaTime);
+	mPlayerController.Update(mWorld, deltaTime,mMainWindow,mMouseWheelDelta);
+
+    mMouseWheelDelta = 0;
 
     if (mFilterToggleCooldown > 0.0f)
     {
@@ -371,6 +468,32 @@ F = toggle texture filtering
     }
 
     mWasFilterToggleKeyDown = isFilterToggleKeyDown;
+
+
+    bool isBoundsDebugToggleKeyDown =
+        (GetAsyncKeyState('B') & 0x8000) != 0;
+
+    if (isBoundsDebugToggleKeyDown &&
+        !mWasBoundsDebugToggleKeyDown)
+    {
+        mWorld.ShowPlayerBoundsDebug =
+            !mWorld.ShowPlayerBoundsDebug;
+
+        if (mWorld.ShowPlayerBoundsDebug)
+        {
+            OutputDebugStringA("Player bounds debug: ON\n");
+        }
+        else
+        {
+            OutputDebugStringA("Player bounds debug: OFF\n");
+        }
+
+        UpdateWindowTitle();
+    }
+
+    mWasBoundsDebugToggleKeyDown =
+        isBoundsDebugToggleKeyDown;
+
 
 
 	bool didSceneTransformChange = false;
@@ -496,7 +619,7 @@ F = toggle texture filtering
 
     // R = reset imported scene transform.
     bool isSceneResetKeyDown =
-        (GetAsyncKeyState('R') & 0x8000) != 0;
+        (GetAsyncKeyState('T') & 0x8000) != 0;
         
 
     if (isSceneResetKeyDown && !mWasSceneResetKeyDown)
@@ -528,7 +651,13 @@ F = toggle texture filtering
     }
 
 
+    mWindowTitleRefreshTimer -= deltaTime;
 
+    if (mWindowTitleRefreshTimer <= 0.0f)
+    {
+        UpdateWindowTitle();
+        mWindowTitleRefreshTimer = 0.10f;
+    }
 
     if (GetAsyncKeyState(VK_ESCAPE) & 0x8000)
     {

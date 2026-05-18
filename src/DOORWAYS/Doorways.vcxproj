@@ -145,7 +145,11 @@
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="ObjLoader.h" />
     <ClInclude Include="Player.h" />
+    <ClInclude Include="PlayerBlockedZone.h" />
     <ClInclude Include="PlayerController.h" />
+    <ClInclude Include="PlayerGroundHeight.h" />
+    <ClInclude Include="PlayerMovementBounds.h" />
+    <ClInclude Include="PlayerSpawnSettings.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="RenderTypes.h" />
     <ClInclude Include="WorldRenderer.h" />

@@ -31,7 +31,7 @@ public:
     // Window Title
     //====================================================
     void UpdateWindowTitle();
-
+    void AddMouseWheelDelta(int wheelDelta);
 
 
 private:
@@ -48,10 +48,15 @@ private:
 
     bool mWasSceneResetKeyDown = false;
     bool mWasScenePrintKeyDown = false;
+    bool mWasBoundsDebugToggleKeyDown = false;
+
+    float mWindowTitleRefreshTimer = 0.0f;
 public:
 
     Renderer mRenderer;
     WorldRenderer mWorldRenderer;
     WorldState mWorld;
 	PlayerController mPlayerController;
+
+    int mMouseWheelDelta = 0;
 };

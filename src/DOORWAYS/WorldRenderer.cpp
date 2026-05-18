@@ -73,8 +73,9 @@ void WorldRenderer::DrawScene(const XMMATRIX& viewProjection)
     DrawImportedScene(viewProjection);
 
 
-    //DrawPlayer(viewProjection);
-
+    DrawPlayerShadow(viewProjection);
+    DrawPlayer(viewProjection);
+    DrawPlayerBoundsDebug(viewProjection);
 
 }
 
@@ -394,34 +395,372 @@ void WorldRenderer::DrawImportedScene(const XMMATRIX& viewProjection)
 
 
 
-
-
 void WorldRenderer::DrawPlayer(const XMMATRIX& viewProjection)
 {
-    mApp->mWorld.MainPlayer.Position.y = 0.3f;
-    Material playerMaterial =
+    const Player& player =
+        mApp->mWorld.MainPlayer;
+
+    XMMATRIX playerWorld =
+        XMMatrixRotationY(player.Yaw) *
+        XMMatrixTranslation(
+            player.Position.x,
+            player.Position.y,
+            player.Position.z);
+
+    Material bodyMaterial =
     {
-        XMFLOAT4(0.95f, 0.85f, 0.20f, 1.0f),
+        XMFLOAT4(0.95f, 0.78f, 0.22f, 1.0f),
         XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
         mApp->mRenderer.mDiffuseTextureView.Get(),
-        XMFLOAT4(0.25f, 0.25f, 0.20f, 1.0f),
-    32.0f,
-    0.0f
+        XMFLOAT4(0.20f, 0.18f, 0.12f, 1.0f),
+        32.0f,
+        0.0f
     };
 
-    XMMATRIX scale = XMMatrixScaling(
-        0.30f,
-        0.60f,
-        0.45f);
+    Material headMaterial =
+    {
+        XMFLOAT4(0.95f, 0.86f, 0.58f, 1.0f),
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+        mApp->mRenderer.mWhiteTextureView.Get(),
+        XMFLOAT4(0.20f, 0.18f, 0.12f, 1.0f),
+        32.0f,
+        0.0f
+    };
 
-    XMMATRIX rotation = XMMatrixRotationY(mApp->mWorld.MainPlayer.Yaw);
+    Material frontMarkerMaterial =
+    {
+        XMFLOAT4(0.08f, 0.08f, 0.10f, 1.0f),
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+        mApp->mRenderer.mWhiteTextureView.Get(),
+        XMFLOAT4(0.10f, 0.10f, 0.10f, 1.0f),
+        16.0f,
+        0.0f
+    };
 
-    XMMATRIX translation = XMMatrixTranslation(
-        mApp->mWorld.MainPlayer.Position.x,
-        mApp->mWorld.MainPlayer.Position.y,
-        mApp->mWorld.MainPlayer.Position.z);
+    DrawPlayerBody(
+        playerWorld,
+        viewProjection,
+        bodyMaterial);
 
-    XMMATRIX playerWorld = scale * rotation * translation;
+    DrawPlayerHead(
+        playerWorld,
+        viewProjection,
+        headMaterial);
 
-    mApp->mRenderer.DrawBox(playerWorld, viewProjection, playerMaterial);
+    DrawPlayerArms(
+        playerWorld,
+        viewProjection,
+        bodyMaterial);
+
+    DrawPlayerLegs(
+        playerWorld,
+        viewProjection,
+        bodyMaterial);
+
+    DrawPlayerFrontMarker(
+        playerWorld,
+        viewProjection,
+        frontMarkerMaterial);
+}
+
+void WorldRenderer::DrawPlayerBody(
+    const XMMATRIX& playerWorld,
+    const XMMATRIX& viewProjection,
+    const Material& bodyMaterial)
+{
+    const Player& player =
+        mApp->mWorld.MainPlayer;
+
+    float idleBreathOffset = 0.0f;
+    float idleBreathScale = 1.0f;
+
+    if (!player.IsMoving)
+    {
+        float breath =
+            sinf(mApp->mWorld.SceneTime * 2.0f);
+
+        idleBreathOffset = breath * 0.025f;
+        idleBreathScale = 1.0f + breath * 0.025f;
+    }
+
+    XMMATRIX bodyWorld =
+        XMMatrixScaling(
+            0.45f,
+            0.75f * idleBreathScale,
+            0.28f) *
+        XMMatrixTranslation(
+            0.0f,
+            0.95f + idleBreathOffset,
+            0.0f) *
+        playerWorld;
+
+    mApp->mRenderer.DrawBox(
+        bodyWorld,
+        viewProjection,
+        bodyMaterial);
+}
+
+void WorldRenderer::DrawPlayerHead(
+    const XMMATRIX& playerWorld,
+    const XMMATRIX& viewProjection,
+    const Material& headMaterial)
+{
+    const Player& player =
+        mApp->mWorld.MainPlayer;
+
+    float idleBreathOffset = 0.0f;
+
+    if (!player.IsMoving)
+    {
+        idleBreathOffset =
+            sinf(mApp->mWorld.SceneTime * 2.0f) * 0.025f;
+    }
+
+    XMMATRIX headWorld =
+        XMMatrixScaling(0.28f, 0.28f, 0.28f) *
+        XMMatrixTranslation(
+            0.0f,
+            1.50f + idleBreathOffset,
+            0.0f) *
+        playerWorld;
+
+    mApp->mRenderer.DrawSphere(
+        headWorld,
+        viewProjection,
+        headMaterial);
+}
+
+void WorldRenderer::DrawPlayerArms(
+    const XMMATRIX& playerWorld,
+    const XMMATRIX& viewProjection,
+    const Material& bodyMaterial)
+{
+    const Player& player =
+        mApp->mWorld.MainPlayer;
+
+    float armSwing = 0.0f;
+
+    if (player.IsMoving)
+    {
+        armSwing =
+            sinf(player.WalkCycleTime * 8.0f) * 0.45f;
+    }
+
+    XMMATRIX leftArmWorld =
+        XMMatrixScaling(0.12f, 0.60f, 0.12f) *
+        XMMatrixRotationX(armSwing) *
+        XMMatrixTranslation(-0.36f, 0.95f, 0.0f) *
+        playerWorld;
+
+    mApp->mRenderer.DrawBox(
+        leftArmWorld,
+        viewProjection,
+        bodyMaterial);
+
+    XMMATRIX rightArmWorld =
+        XMMatrixScaling(0.12f, 0.60f, 0.12f) *
+        XMMatrixRotationX(-armSwing) *
+        XMMatrixTranslation(0.36f, 0.95f, 0.0f) *
+        playerWorld;
+
+    mApp->mRenderer.DrawBox(
+        rightArmWorld,
+        viewProjection,
+        bodyMaterial);
+}
+
+void WorldRenderer::DrawPlayerLegs(
+    const XMMATRIX& playerWorld,
+    const XMMATRIX& viewProjection,
+    const Material& bodyMaterial)
+{
+    const Player& player =
+        mApp->mWorld.MainPlayer;
+
+    float legSwing = 0.0f;
+
+    if (player.IsMoving)
+    {
+        legSwing =
+            sinf(player.WalkCycleTime * 8.0f) * 0.35f;
+    }
+
+    XMMATRIX leftLegWorld =
+        XMMatrixScaling(0.15f, 0.70f, 0.15f) *
+        XMMatrixRotationX(-legSwing) *
+        XMMatrixTranslation(-0.13f, 0.35f, 0.0f) *
+        playerWorld;
+
+    mApp->mRenderer.DrawBox(
+        leftLegWorld,
+        viewProjection,
+        bodyMaterial);
+
+    XMMATRIX rightLegWorld =
+        XMMatrixScaling(0.15f, 0.70f, 0.15f) *
+        XMMatrixRotationX(legSwing) *
+        XMMatrixTranslation(0.13f, 0.35f, 0.0f) *
+        playerWorld;
+
+    mApp->mRenderer.DrawBox(
+        rightLegWorld,
+        viewProjection,
+        bodyMaterial);
+}
+
+void WorldRenderer::DrawPlayerShadow(
+    const XMMATRIX& viewProjection)
+{
+    const Player& player =
+        mApp->mWorld.MainPlayer;
+
+    float shadowY =
+        player.TargetGroundY + 0.02f;
+
+    float shadowScale = 1.0f;
+
+    if (player.IsMoving)
+    {
+        shadowScale = 1.08f;
+    }
+
+    Material shadowMaterial =
+    {
+        XMFLOAT4(0.0f, 0.0f, 0.0f, 0.28f),
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+        mApp->mRenderer.mWhiteTextureView.Get(),
+        XMFLOAT4(0.02f, 0.02f, 0.02f, 1.0f),
+        8.0f,
+        0.0f
+    };
+
+    XMMATRIX shadowWorld =
+        XMMatrixScaling(
+            0.70f * shadowScale,
+            0.015f,
+            0.55f * shadowScale) *
+        XMMatrixTranslation(
+            player.Position.x,
+            shadowY,
+            player.Position.z);
+
+    mApp->mRenderer.SetAlphaBlendingEnabled(true);
+
+    mApp->mRenderer.DrawBox(
+        shadowWorld,
+        viewProjection,
+        shadowMaterial);
+
+    mApp->mRenderer.SetAlphaBlendingEnabled(false);
+}
+
+void WorldRenderer::DrawPlayerFrontMarker(
+    const XMMATRIX& playerWorld,
+    const XMMATRIX& viewProjection,
+    const Material& frontMarkerMaterial)
+{
+    const Player& player =
+        mApp->mWorld.MainPlayer;
+
+    float idleBreathOffset = 0.0f;
+
+    if (!player.IsMoving)
+    {
+        idleBreathOffset =
+            sinf(mApp->mWorld.SceneTime * 2.0f) * 0.025f;
+    }
+
+    XMMATRIX frontMarkerWorld =
+        XMMatrixScaling(0.18f, 0.18f, 0.04f) *
+        XMMatrixTranslation(
+            0.0f,
+            1.05f + idleBreathOffset,
+            0.17f) *
+        playerWorld;
+
+    mApp->mRenderer.DrawBox(
+        frontMarkerWorld,
+        viewProjection,
+        frontMarkerMaterial);
+}
+
+void WorldRenderer::DrawPlayerBoundsDebug(
+    const XMMATRIX& viewProjection)
+{
+    if (!mApp->mWorld.ShowPlayerBoundsDebug)
+    {
+        return;
+    }
+
+    const PlayerMovementBounds& bounds =
+        mApp->mWorld.MainPlayerBounds;
+
+    const float minX = bounds.MinX;
+    const float maxX = bounds.MaxX;
+    const float minZ = bounds.MinZ;
+    const float maxZ = bounds.MaxZ;
+
+    const float centerX = (minX + maxX) * 0.5f;
+    const float centerZ = (minZ + maxZ) * 0.5f;
+
+    const float widthX = maxX - minX;
+    const float widthZ = maxZ - minZ;
+
+    const float wallThickness = 0.08f;
+    const float wallHeight = 0.25f;
+    const float wallY = 0.05f;
+
+    Material debugMaterial =
+    {
+        XMFLOAT4(1.0f, 0.05f, 0.05f, 0.35f),
+        XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+        mApp->mRenderer.mWhiteTextureView.Get(),
+        XMFLOAT4(0.05f, 0.05f, 0.05f, 1.0f),
+        8.0f,
+        0.0f
+    };
+
+    mApp->mRenderer.SetAlphaBlendingEnabled(true);
+
+    // Front boundary: MinZ side.
+    XMMATRIX frontWall =
+        XMMatrixScaling(widthX, wallHeight, wallThickness) *
+        XMMatrixTranslation(centerX, wallY, minZ);
+
+    mApp->mRenderer.DrawBox(
+        frontWall,
+        viewProjection,
+        debugMaterial);
+
+    // Back boundary: MaxZ side.
+    XMMATRIX backWall =
+        XMMatrixScaling(widthX, wallHeight, wallThickness) *
+        XMMatrixTranslation(centerX, wallY, maxZ);
+
+    mApp->mRenderer.DrawBox(
+        backWall,
+        viewProjection,
+        debugMaterial);
+
+    // Left boundary: MinX side.
+    XMMATRIX leftWall =
+        XMMatrixScaling(wallThickness, wallHeight, widthZ) *
+        XMMatrixTranslation(minX, wallY, centerZ);
+
+    mApp->mRenderer.DrawBox(
+        leftWall,
+        viewProjection,
+        debugMaterial);
+
+    // Right boundary: MaxX side.
+    XMMATRIX rightWall =
+        XMMatrixScaling(wallThickness, wallHeight, widthZ) *
+        XMMatrixTranslation(maxX, wallY, centerZ);
+
+    mApp->mRenderer.DrawBox(
+        rightWall,
+        viewProjection,
+        debugMaterial);
+
+    mApp->mRenderer.SetAlphaBlendingEnabled(false);
 }

@@ -9,7 +9,17 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 2
-map_Kd C:/Users/hedon/source/repos/DOORWAYS/assets/textures/polyhaven/marble_01_diff_1k.jpg
+map_Kd ../../textures/polyhaven/marble_01_diff_1k.jpg
+
+newmtl MAT_Icy_Ground
+Ns 302.500000
+Ka 1.000000 1.000000 1.000000
+Ks 0.750000 0.750000 0.750000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd ../../textures/polyhaven/snow_01_diff_1k.jpg
 
 newmtl MAT_Snowy01
 Ns 250.000000
@@ -19,14 +29,4 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 2
-map_Kd C:/Users/hedon/OneDrive/Documents/Poly Haven/snow_03/textures/snow_03_diff_1k.jpg
-
-newmtl MAT_Water_Main
-Ns 302.500000
-Ka 1.000000 1.000000 1.000000
-Ks 0.750000 0.750000 0.750000
-Ke 0.000000 0.000000 0.000000
-Ni 1.500000
-d 1.000000
-illum 2
-map_Kd C:/Users/hedon/OneDrive/Documents/Poly Haven/snow_01/textures/snow_01_diff_1k.jpg
+map_Kd ../../textures/polyhaven/snow_03_diff_1k.jpg

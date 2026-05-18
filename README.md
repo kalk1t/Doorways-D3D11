@@ -31,31 +31,73 @@ The project will continue to grow through small playable milestones.
 
 ---
 
-## Milestone 21 — Main Scene Blender Composition V1
+---
 
-Milestone 21 moved Doorways from a renderer-built environment toward a Blender-authored main starting scene.
+## Milestone 22 — First Playable Character V1
 
-The goal of this milestone is to establish the first real version of the main scene: a Greek-style porch and temple placed in the middle of a water environment, with mountains surrounding the scene and two waterfalls.
+Milestone 22 moved Doorways from a scene-viewing project into the first playable character version.
 
-This milestone treats Blender as the main scene editor while the Direct3D 11 renderer loads the exported scene through the existing OBJ/MTL pipeline.
+The goal of this milestone was not to add a final imported character model yet. Instead, the focus was to build the gameplay foundation required before character art, animation assets, collision, and interaction are added.
 
 ### Goal
 
-Create the first complete main starting scene composition for Doorways.
+Add the first visible playable character to the Doorways main scene.
 
-The scene should represent the core visual identity of the game:
+The player can now move through the Blender-authored porch/stairs environment with third-person camera control, simple animation, stair height handling, and debug tools for tuning the playable area.
 
-- Greek-style porch and temple
-- 9 stairs leading toward the temple
-- water surrounding the central temple area
-- Mountains around
-- two waterfall locations coming down from the mountain area, behind the temple
-- night sky and moon still rendered by the engine
-- first real imported prop support through the Blender/OBJ workflow
+### Completed
 
-### Blender Scene Source
+- Enabled the player render in the main scene.
+- Replaced the single debug cube with a simple humanoid placeholder character:
+  - body
+  - head
+  - arms
+  - legs
+  - front-facing marker
+- Refactored player drawing into smaller helper functions:
+  - `DrawPlayerBody`
+  - `DrawPlayerHead`
+  - `DrawPlayerArms`
+  - `DrawPlayerLegs`
+  - `DrawPlayerFrontMarker`
+  - `DrawPlayerShadow`
+- Added player movement state:
+  - idle
+  - moving
+  - walk cycle timer
+- Added simple procedural walking animation.
+- Added simple idle breathing animation.
+- Added third-person mouse-look camera.
+- Added cursor hiding and cursor locking while the game window is active.
+- Fixed the Alt-key system-menu freeze issue.
+- Added camera follow based on camera yaw.
+- Added mouse-wheel camera zoom distance.
+- Added player spawn settings.
+- Separated player reset from imported scene reset:
+  - `R` resets player/camera
+  - `T` resets imported scene transform
+- Added player movement bounds for the porch/stairs playable area.
+- Added debug bounds overlay.
+- Added `B` key to show/hide the player bounds debug overlay.
+- Added stair height handling.
+- Added smooth stair height following.
+- Added a simple player contact shadow.
+- Added player debug information to the window title:
+  - position
+  - yaw
+  - movement state
+  - camera distance
+  - bounds debug state
 
-Created/updated the main Blender scene file:
+### Current Controls
 
 ```text
-assets/blender/main_starting_scene_v1.blend
+W / A / S / D      Move player
+Mouse movement     Rotate camera
+Mouse wheel        Zoom camera in / out
+R                  Reset player and camera
+B                  Toggle player bounds debug overlay
+F                  Toggle texture filtering debug mode
+T                  Reset imported scene transform
+P                  Print imported scene transform
+Escape             Exit application
